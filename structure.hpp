@@ -32,6 +32,7 @@ public:
     int parent;
     bool closed;
 
+    GameState() : parent(-1), closed(false) {}
     GameState(const vector<Jar>& j, int p);
     string to_key() const;
 };

@@ -18,69 +18,76 @@ bool is_unique_state(const GameState& new_state, const std::vector<GameState>& g
     return true;
 }
 
-void generate_children(int current_index, std::vector<GameState>& game_states) {
+enum ActionType { FILL, EMPTY, TRANSFER };
+
+struct Action {
+    ActionType type;
+    int jar_index;
+    int target_index;
+    Action(ActionType t, int j, int tj = -1) : type(t), jar_index(j), target_index(tj) {}
+};
+
+bool generate_one_child(int current_index, std::vector<GameState>& game_states, int& action_index, GameState& child) {
     if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
         std::cerr << "Error: Invalid current_index: " << current_index << std::endl;
-        return;
+        return false;
     }
 
-    // Copy jars to avoid reference invalidation
     std::vector<Jar> jars = game_states[current_index].jars;
+    int num_jars = jars.size();
+    int actions_per_jar = 2 + 2 * (num_jars - 1);
+    int total_actions = num_jars * actions_per_jar;
 
-    std::cout << "Generating children for state " << current_index << ":\n";
-    for (size_t i = 0; i < jars.size(); ++i) {
-        std::cout << "Jar " << i << ": id=" << jars[i].id << ", value=" << jars[i].current_value << ", capacity=" << jars[i].max_capacity << std::endl;
-        if (jars[i].max_capacity <= 0 || jars[i].current_value < 0 || jars[i].current_value > jars[i].max_capacity) {
-            std::cerr << "Error: Invalid jar at index " << i << std::endl;
-            continue;
-        }
+    if (action_index >= total_actions) return false;
 
-        // Fill
-        if (!jars[i].is_full()) {
-            std::vector<Jar> new_jars = jars;
-            new_jars[i].fill();
-            GameState child(new_jars, current_index);
-            if (is_unique_state(child, game_states)) {
-                game_states.push_back(child);
-            }
-        }
+    int jar_idx = action_index / actions_per_jar;
+    int action_offset = action_index % actions_per_jar;
 
-        // Empty
-        std::cout << "Checking is_empty for jar " << i << std::endl;
-        if (!jars[i].is_empty()) {
-            std::vector<Jar> new_jars = jars;
-            new_jars[i].empty();
-            GameState child(new_jars, current_index);
-            if (is_unique_state(child, game_states)) {
-                game_states.push_back(child);
-            }
-        }
+    if (jars[jar_idx].max_capacity <= 0 || jars[jar_idx].current_value < 0 || jars[jar_idx].current_value > jars[jar_idx].max_capacity) {
+        std::cerr << "Error: Invalid jar at index " << jar_idx << std::endl;
+        return false;
+    }
 
-        // Transfer
-        for (int dir : {-1, 1}) {
-            int j = i + dir;
-            if (j >= 0 && j < static_cast<int>(jars.size())) {
-                if (!jars[i].is_empty() && !jars[j].is_full()) {
-                    std::vector<Jar> new_jars = jars;
-                    int amount = new_jars[i].current_value;
-                    int sobra = new_jars[j].transfer(amount);
-                    new_jars[i].current_value = sobra;
-                    if (new_jars[i].current_value < 0 || new_jars[j].current_value < 0 ||
-                        new_jars[i].current_value > new_jars[i].max_capacity ||
-                        new_jars[j].current_value > new_jars[j].max_capacity) {
-                        std::cerr << "Error: Invalid transfer from jar " << i << " to " << j << std::endl;
-                        continue;
-                    }
-                    GameState child(new_jars, current_index);
-                    if (is_unique_state(child, game_states)) {
-                        game_states.push_back(child);
-                    }
-                }
-            }
+    std::vector<Jar> new_jars = jars;
+    bool valid_action = false;
+
+    if (action_offset == 0 && !jars[jar_idx].is_full()) {
+        new_jars[jar_idx].fill();
+        valid_action = true;
+    } else if (action_offset == 1 && !jars[jar_idx].is_empty()) {
+        new_jars[jar_idx].empty();
+        valid_action = true;
+    } else if (action_offset >= 2) {
+        int transfer_idx = (action_offset - 2) / 2;
+        int dir = (transfer_idx == 0) ? -1 : 1;
+        int target_idx = jar_idx + dir;
+        bool is_left = (action_offset % 2 == 0);
+
+        if (is_left && dir == -1 && target_idx >= 0 && !jars[jar_idx].is_empty() && !jars[target_idx].is_full()) {
+            int amount = new_jars[jar_idx].current_value;
+            int sobra = new_jars[target_idx].transfer(amount);
+            new_jars[jar_idx].current_value = sobra;
+            valid_action = true;
+        } else if (!is_left && dir == 1 && target_idx < num_jars && !jars[jar_idx].is_empty() && !jars[target_idx].is_full()) {
+            int amount = new_jars[jar_idx].current_value;
+            int sobra = new_jars[target_idx].transfer(amount);
+            new_jars[jar_idx].current_value = sobra;
+            valid_action = true;
         }
     }
 
-    game_states[current_index].closed = true;
+    if (valid_action) {
+        for (size_t i = 0; i < new_jars.size(); ++i) {
+            if (new_jars[i].current_value < 0 || new_jars[i].current_value > new_jars[i].max_capacity) {
+                std::cerr << "Error: Invalid state after action " << action_index << " for jar " << i << std::endl;
+                return false;
+            }
+        }
+        child = GameState(new_jars, current_index);
+        return is_unique_state(child, game_states);
+    }
+
+    return false;
 }
 
 void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
@@ -96,7 +103,8 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
     }
 
     std::vector<GameState> game_states;
-    game_states.emplace_back(initial_jars, -1); // root
+    game_states.emplace_back(initial_jars, -1);
+    std::vector<int> action_indices(game_states.size(), 0);
 
     int current_index = 0;
 
@@ -121,20 +129,21 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
         }
 
         if (!game_states[current_index].closed) {
-            generate_children(current_index, game_states);
-        }
-
-        int next_index = -1;
-        for (int i = current_index + 1; i < static_cast<int>(game_states.size()); ++i) {
-            if (game_states[i].parent == current_index && !game_states[i].closed) {
-                next_index = i;
-                break;
+            GameState child; // Declare here, will be initialized by generate_one_child
+            if (generate_one_child(current_index, game_states, action_indices[current_index], child)) {
+                game_states.push_back(child);
+                action_indices.push_back(0);
+                current_index = game_states.size() - 1;
+                continue;
+            } else {
+                action_indices[current_index]++;
+                if (action_indices[current_index] >= initial_jars.size() * (2 + 2 * (initial_jars.size() - 1))) {
+                    game_states[current_index].closed = true;
+                }
             }
         }
 
-        if (next_index != -1) {
-            current_index = next_index;
-        } else {
+        if (game_states[current_index].closed) {
             current_index = game_states[current_index].parent;
         }
     }
