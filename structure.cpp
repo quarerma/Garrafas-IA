@@ -1,7 +1,7 @@
 #include "structure.hpp"
 
-Jar::Jar(int jar_id, int capacity)
-    : id(jar_id), current_value(0), max_capacity(capacity) {}
+Jar::Jar(int jar_id, int capacity, int curr_value = 0)
+    : id(jar_id), current_value(curr_value), max_capacity(capacity) {}
 
 void Jar::fill() {
     current_value = max_capacity;
@@ -20,7 +20,6 @@ bool Jar::is_empty() const {
         std::cerr << "Error: Null Jar pointer" << std::endl;
         return false;
     }
-    std::cout << "Current value: " << current_value << std::endl;
     return current_value == 0;
 }
 

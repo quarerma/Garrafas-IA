@@ -5,12 +5,11 @@
 
 int main() {
     std::vector<Jar> jars = {
-        Jar(0, 8),
-        Jar(1, 5),
-        Jar(2, 3)
+        Jar(0, 9, 4),
+        Jar(1, 5, 1),
+        Jar(2, 3, 3)
     };
 
-    jars[0].fill(); // opcional: começa cheio
 
     cout << "Estado inicial:\n";
     for (const Jar& jar : jars) {

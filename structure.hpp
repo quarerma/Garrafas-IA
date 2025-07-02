@@ -14,7 +14,7 @@ public:
     int current_value;
     int max_capacity;
 
-    Jar(int jar_id, int capacity);
+    Jar(int jar_id, int capacity, int curr_value);
 
     void fill();
     void empty();
