@@ -8,7 +8,8 @@
 
 using namespace std;
 
-class Jar {
+class Jar
+{
 public:
     int id;
     int current_value;
@@ -25,16 +26,21 @@ public:
     int transfer(int amount);
 };
 
-class GameState {
+class GameState
+{
 public:
     vector<Jar> jars;
     vector<int> values;
     int parent;
     bool closed;
+    int index;
 
-    GameState() : parent(-1), closed(false) {}
-    GameState(const vector<Jar>& j, int p);
+    GameState() : index(0), parent(-1), closed(false) {}
+    GameState(const vector<Jar> &j, int p);
     string to_key() const;
+    void transfer_from_jars(Jar &jarOrigin, Jar &jarDestination);
+    void print() const;
+    int imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados);
 };
 
 #endif // STRUCTURE_HPP
