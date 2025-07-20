@@ -3,6 +3,7 @@
 #include "structure.hpp"
 #include "backtrack.hpp"
 #include "profundidade_largura.hpp"
+#include "ordenada_gulosa.hpp"
 
 int main()
 {
@@ -17,9 +18,12 @@ int main()
         cout << "Jar " << jar.id << ": " << jar.current_value << "/" << jar.max_capacity << endl;
     }
 
-    ProfundidadeLargura buscas;
-    buscas.busca_profundidade(jars, 5);
-    buscas.busca_largura(jars);
+    // ProfundidadeLargura buscas;
+    // buscas.busca_profundidade(jars, 5);
+    // buscas.busca_largura(jars);
+
+    OrdenadaGulosa buscas;
+    buscas.busca_ordenada(jars);
 
     return 0;
 }

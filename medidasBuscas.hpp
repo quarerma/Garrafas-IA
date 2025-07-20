@@ -11,12 +11,14 @@ public:
     int nosExpandidos = 0;
     int totalFilhosGerados = 0;
     double tempoExecucao = 0.0;
+    int custoCaminho = 0;
 
     void imprimirDados() const
     {
         std::cout << "\n--- Dados da Busca ---\n";
         std::cout << "Tempo de execucao: " << tempoExecucao << " ms\n";
         std::cout << "Profundidade: " << profundidadeMax << "\n";
+        std::cout << "Custo da Solucao: " << custoCaminho << "\n";
         std::cout << "Nos visitados: " << nosVisitados << "\n";
         std::cout << "Nos expandidos: " << nosExpandidos << "\n";
         std::cout << "Media de ramificacao: ";

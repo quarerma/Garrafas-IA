@@ -34,13 +34,16 @@ public:
     int parent;
     bool closed;
     int index;
+    int custoCaminho;
+    int heuristica;
 
-    GameState() : index(0), parent(-1), closed(false) {}
+    GameState() : index(0), parent(-1), closed(false), custoCaminho(0) {}
     GameState(const vector<Jar> &j, int p);
     string to_key() const;
     void transfer_from_jars(Jar &jarOrigin, Jar &jarDestination);
     void print() const;
     int imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados);
+    int get_transfer_value_from_jars(Jar &jarOrigin, Jar &jarDestination);
 };
 
 #endif // STRUCTURE_HPP

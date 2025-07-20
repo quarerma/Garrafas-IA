@@ -46,7 +46,7 @@ int Jar::transfer(int amount)
     return amount - accepted;
 }
 
-GameState::GameState(const vector<Jar> &j, int p) : jars(j), parent(p), closed(false)
+GameState::GameState(const vector<Jar> &j, int p) : jars(j), parent(p), closed(false), index(0), custoCaminho(0)
 {
     for (const Jar &jar : j)
     {
@@ -57,9 +57,9 @@ GameState::GameState(const vector<Jar> &j, int p) : jars(j), parent(p), closed(f
 string GameState::to_key() const
 {
     string key;
-    for (int val : values)
+    for (Jar jar : jars)
     {
-        key += to_string(val) + "|";
+        key += to_string(jar.current_value) + "|";
     }
     return key;
 }
@@ -77,6 +77,18 @@ void GameState::transfer_from_jars(Jar &jarOrigin, Jar &jarDestination)
     jarDestination.current_value += transferAmount;
 }
 
+int GameState::get_transfer_value_from_jars(Jar &jarOrigin, Jar &jarDestination)
+{
+    // Quanto espaço ainda cabe no destino?
+    int availableSpace = jarDestination.get_capacity() - jarDestination.current_value;
+
+    // Só transfere o mínimo entre o que tem na origem e o espaço livre
+    int transferAmount = std::min(jarOrigin.current_value, availableSpace);
+
+    // Subtrai da origem e soma ao destino
+    return transferAmount;
+}
+
 void GameState::print() const
 {
     std::cout << "(";
@@ -84,7 +96,7 @@ void GameState::print() const
     {
         std::cout << jar.current_value << "/" << jar.max_capacity << " ";
     }
-    std::cout << ") Parent: " << parent << ", Index: " << index << ", Closed: " << (closed ? "true" : "false") << "\n";
+    std::cout << ") Custo Caminho: " << custoCaminho << ", Index: " << index << ", Closed: " << (closed ? "true" : "false") << to_key() << "\n";
 }
 
 int GameState::imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados)

@@ -6,23 +6,6 @@
 #include <queue>
 #include <ctime>
 
-/* TAREFAS:
-
-[x] criar função de transferir
-[x] testar
-[x] criar função de gerar filho
-[x] testar
-[x] terminar busca em profundidade
-[x] testar
-[x] fazer largura
-[x] testar
-[ ] fazer medida de caminho e profundidade
-[ ] medir num nós expandidos e visitados
-[ ] medir valor médio de ramificação
-[ ] medir tempo de execução
-[x] função imprimirDados pra mostrar os dados no final
-*/
-
 bool is_goal_state(const GameState &state)
 {
     if (state.jars.empty())
@@ -44,6 +27,7 @@ void copiaEstado(GameState &origem, GameState &destino)
     {
         destino.jars.push_back(origem.jars[i]);
     }
+    destino.custoCaminho = origem.custoCaminho;
 }
 
 bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJarraDestino, GameState &newState, vector<GameState> &vetorEstados)
@@ -74,6 +58,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             copiaEstado(state, newState);
             newState.jars[indiceJarraOrigem].fill();
 
+            newState.custoCaminho += state.jars[indiceJarraOrigem].space_left();
             newState.index = vetorEstados.size();
             newState.parent = state.index;
             vetorEstados.push_back(newState);
@@ -93,6 +78,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             copiaEstado(state, newState);
             newState.jars[indiceJarraOrigem].empty();
 
+            newState.custoCaminho += state.jars[indiceJarraOrigem].current_value;
             newState.index = vetorEstados.size();
             newState.parent = state.index;
             vetorEstados.push_back(newState);
@@ -114,6 +100,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             copiaEstado(state, newState);
             newState.transfer_from_jars(newState.jars[indiceJarraOrigem], newState.jars[indiceJarraDestino]);
 
+            newState.custoCaminho += state.get_transfer_value_from_jars(state.jars[indiceJarraOrigem], state.jars[indiceJarraDestino]);
             newState.index = vetorEstados.size();
             newState.parent = state.index;
             vetorEstados.push_back(newState);
@@ -141,6 +128,7 @@ void busca_profundidade_aux(GameState &state, int &profundidade, const int &prof
         noEncontrado = true;
 
         medidas.profundidadeMax = state.imprimeCaminho(state, state.index, vetorEstados);
+        medidas.custoCaminho = state.custoCaminho;
         return;
     }
     // profundidade++
@@ -278,7 +266,7 @@ void ProfundidadeLargura::busca_largura(const std::vector<Jar> &initial_jars)
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
 
             medidas.profundidadeMax = estadoAtual.imprimeCaminho(estadoAtual, estadoAtual.index, vetorEstados);
-
+            medidas.custoCaminho = estadoAtual.custoCaminho;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
             return;
