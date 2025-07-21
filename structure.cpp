@@ -1,7 +1,11 @@
 #include <vector>
 #include <string>
-#include <algorithm> // for std::min, std::max
-#include <climits>   // for INT_MAX
+#include <algorithm> 
+#include <climits>  
+#include "structure.hpp"
+#include <iostream> 
+
+using namespace std; 
 
 struct Jar {
     int id;
@@ -51,12 +55,13 @@ struct GameState {
     std::vector<int> values;
     int parent;
     bool closed;
-    int g_cost;
+    int g_cost; 
+    int index; 
     int target_Q;
     int max_cap;
     int num_jars;
 
-    GameState(const std::vector<Jar>& j, int p) : jars(j), parent(p), closed(false), g_cost(0) {
+    GameState(const std::vector<Jar>& j, int p) : jars(j), parent(j), closed(p), g_cost(false), index(0), g_cost(0) {
         num_jars = j.size();
         target_Q = (num_jars > 0) ? INT_MAX : 0;
         max_cap = 0;
@@ -120,5 +125,42 @@ struct GameState {
             default:
                 return -1;
         }
+    }
+
+    void transfer_from_jars(Jar &jarOrigin, Jar &jarDestination) {
+        int availableSpace = jarDestination.get_capacity() - jarDestination.current_value;
+        int transferAmount = std::min(jarOrigin.current_value, availableSpace);
+        jarOrigin.current_value -= transferAmount;
+        jarDestination.current_value += transferAmount;
+    }
+
+    int get_transfer_value_from_jars(Jar &jarOrigin, Jar &jarDestination) {
+        int availableSpace = jarDestination.get_capacity() - jarDestination.current_value;
+        int transferAmount = std::min(jarOrigin.current_value, availableSpace);
+        return transferAmount;
+    }
+
+    void print() const {
+        std::cout << "(";
+        for (const Jar &jar : jars) {
+            std::cout << jar.current_value << "/" << jar.max_capacity << " ";
+        }
+        std::cout << ") Custo Caminho: " << g_cost << ", Index: " << index << ", Closed: " << (closed ? "true" : "false") << to_key() << "\n";
+    }
+
+    int imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados) {
+        std::cout << endl
+                  << "Caminho até o nó final: " << endl;
+        int noAtualIndice = noFinal.parent;
+        vector<int> caminho;
+        caminho.push_back(indiceNoFinal);
+        while (noAtualIndice != -1) {
+            caminho.push_back(noAtualIndice);
+            noAtualIndice = estados[noAtualIndice].parent;
+        }
+        for (int i = caminho.size() - 1; i >= 0; i--) {
+            estados[caminho[i]].print();
+        }
+        return caminho.size();
     }
 };
