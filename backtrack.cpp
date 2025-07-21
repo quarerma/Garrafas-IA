@@ -3,12 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-bool is_goal_state(const GameState& state) {
-    if (state.jars.empty()) return false;
-    const Jar& last = state.jars.back();
-    return last.current_value == (last.max_capacity / 3);
-}
-
 bool checkParentLoop(const GameState& child, int current_index, const std::vector<GameState>& game_states) {
     if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
         return false;
@@ -173,7 +167,7 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
         }
         std::cout << "\n";
 
-        if (is_goal_state(game_states[current_index])) {
+        if (game_states[current_index].is_goal()) {
             std::cout << "Meta atingida! Total de estados explorados: " << total_states << "\n";
             std::vector<int> path;
             int idx = current_index;
