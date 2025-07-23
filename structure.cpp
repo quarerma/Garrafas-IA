@@ -148,7 +148,7 @@ struct GameState {
         std::cout << ") Custo Caminho: " << g_cost << ", Index: " << index << ", Closed: " << (closed ? "true" : "false") << to_key() << "\n";
     }
 
-    int imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados) {
+    int print_path(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados) {
         std::cout << endl
                   << "Caminho até o nó final: " << endl;
         int noAtualIndice = noFinal.parent;

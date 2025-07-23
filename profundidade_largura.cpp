@@ -6,13 +6,6 @@
 #include <queue>
 #include <ctime>
 
-bool is_goal_state(const GameState &state)
-{
-    if (state.jars.empty())
-        return false;
-    const Jar &last = state.jars.back();
-    return last.current_value == (last.max_capacity / 3);
-}
 
 enum Acao
 {
@@ -120,14 +113,14 @@ void busca_profundidade_aux(GameState &state, int &profundidade, const int &prof
     {
         return;
     }
-    if (is_goal_state(state))
+    if (state.is_goal())
     {
         std::cout << endl
                   << "Estado encontrado!" << endl;
 
         noEncontrado = true;
 
-        medidas.profundidadeMax = state.imprimeCaminho(state, state.index, vetorEstados);
+        medidas.profundidadeMax = state.print_path(state, state.index, vetorEstados);
         medidas.custoCaminho = state.custoCaminho;
         return;
     }
@@ -255,7 +248,7 @@ void ProfundidadeLargura::busca_largura(const std::vector<Jar> &initial_jars)
         estadoAtual.print();
 
         //  verifica vitória (se sim, imprimir)
-        if (is_goal_state(estadoAtual))
+        if (istate.is_goal())
         {
             std::cout << endl
                       << "Nó encontrado!" << endl;
@@ -265,7 +258,7 @@ void ProfundidadeLargura::busca_largura(const std::vector<Jar> &initial_jars)
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
 
-            medidas.profundidadeMax = estadoAtual.imprimeCaminho(estadoAtual, estadoAtual.index, vetorEstados);
+            medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
             medidas.custoCaminho = estadoAtual.custoCaminho;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();

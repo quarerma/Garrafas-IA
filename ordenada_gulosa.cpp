@@ -8,13 +8,7 @@
 #include <ctime>
 #include <set>
 
-bool is_goal_state(const GameState &state)
-{
-    if (state.jars.empty())
-        return false;
-    const Jar &last = state.jars.back();
-    return last.current_value == (last.max_capacity / 3);
-}
+
 
 enum Acao
 {
@@ -32,7 +26,7 @@ void copiaEstado(GameState &origem, GameState &destino)
     destino.custoCaminho = origem.custoCaminho;
 }
 
-int retornaHeuristica(GameState &state)
+int retornaheuristic()(GameState &state)
 {
     return state.custoCaminho;
 }
@@ -67,7 +61,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             newState.custoCaminho += state.jars[indiceJarraOrigem].space_left();
             newState.index = vetorEstados.size();
             newState.parent = state.index;
-            newState.heuristica = retornaHeuristica(newState);
+            newState.heuristic() = retornaheuristic()(newState);
             vetorEstados.push_back(newState);
 
             return true;
@@ -88,7 +82,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             newState.custoCaminho += state.jars[indiceJarraOrigem].current_value;
             newState.index = vetorEstados.size();
             newState.parent = state.index;
-            newState.heuristica = retornaHeuristica(newState);
+            newState.heuristic() = retornaheuristic()(newState);
             vetorEstados.push_back(newState);
 
             return true;
@@ -111,7 +105,7 @@ bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJar
             newState.custoCaminho += state.get_transfer_value_from_jars(state.jars[indiceJarraOrigem], state.jars[indiceJarraDestino]);
             newState.index = vetorEstados.size();
             newState.parent = state.index;
-            newState.heuristica = retornaHeuristica(newState);
+            newState.heuristic() = retornaheuristic()(newState);
             vetorEstados.push_back(newState);
 
             return true;
@@ -126,9 +120,9 @@ bool comparaPorCusto(const GameState &stateA, const GameState &stateB)
     return stateA.custoCaminho > stateB.custoCaminho;
 }
 
-bool comparaPorHeuristica(const GameState &stateA, const GameState &stateB)
+bool comparaPorheuristic()(const GameState &stateA, const GameState &stateB)
 {
-    return stateA.heuristica < stateB.heuristica;
+    return stateA.heuristic() < stateB.heuristic();
 }
 
 void OrdenadaGulosa::busca_ordenada(const std::vector<Jar> &initial_jars)
@@ -171,7 +165,7 @@ void OrdenadaGulosa::busca_ordenada(const std::vector<Jar> &initial_jars)
         estadoAtual.print();
 
         //  verifica vitória (se sim, imprimir)
-        if (is_goal_state(estadoAtual))
+        if (estadoAtual.is_goal())
         {
             std::cout << endl
                       << "Nó encontrado!" << endl;
@@ -181,7 +175,7 @@ void OrdenadaGulosa::busca_ordenada(const std::vector<Jar> &initial_jars)
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
 
-            medidas.profundidadeMax = estadoAtual.imprimeCaminho(estadoAtual, estadoAtual.index, vetorEstados);
+            medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
             medidas.custoCaminho = estadoAtual.custoCaminho;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
@@ -295,7 +289,7 @@ void OrdenadaGulosa::busca_gulosa(const std::vector<Jar> &initial_jars)
         estadoAtual.print();
 
         //  verifica vitória (se sim, imprimir)
-        if (is_goal_state(estadoAtual))
+        if (estadoAtual.is_goal())
         {
             std::cout << endl
                       << "Nó encontrado!" << endl;
@@ -305,7 +299,7 @@ void OrdenadaGulosa::busca_gulosa(const std::vector<Jar> &initial_jars)
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
 
-            medidas.profundidadeMax = estadoAtual.imprimeCaminho(estadoAtual, estadoAtual.index, vetorEstados);
+            medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
             medidas.custoCaminho = estadoAtual.custoCaminho;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
@@ -362,7 +356,7 @@ void OrdenadaGulosa::busca_gulosa(const std::vector<Jar> &initial_jars)
 
         // ordenar filhos
 
-        std::sort(abertos.begin(), abertos.end(), comparaPorHeuristica);
+        std::sort(abertos.begin(), abertos.end(), comparaPorheuristic());
     }
 
     return;

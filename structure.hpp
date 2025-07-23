@@ -5,17 +5,17 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <climits>
 
 using namespace std;
 
-class Jar
-{
+class Jar {
 public:
     int id;
     int current_value;
     int max_capacity;
 
-    Jar(int jar_id, int capacity, int curr_value);
+    Jar(int jar_id, int capacity, int curr_value = 0);
 
     void fill();
     void empty();
@@ -26,24 +26,29 @@ public:
     int transfer(int amount);
 };
 
-class GameState
-{
+class GameState {
 public:
     vector<Jar> jars;
     vector<int> values;
     int parent;
     bool closed;
+    int g_cost;
     int index;
-    int custoCaminho;
-    int heuristica;
+    int target_Q;
+    int max_cap;
+    int num_jars;
 
-    GameState() : index(0), parent(-1), closed(false), custoCaminho(0) {}
-    GameState(const vector<Jar> &j, int p);
+    GameState();
+    GameState(const vector<Jar>& j, int p);
     string to_key() const;
-    void transfer_from_jars(Jar &jarOrigin, Jar &jarDestination);
+    bool is_goal() const;
+    int get_g_cost() const;
+    int heuristic() const;
+    int calculate_action_cost(int jar_idx, int action_type) const;
+    void transfer_from_jars(Jar& jarOrigin, Jar& jarDestination);
+    int get_transfer_value_from_jars(Jar& jarOrigin, Jar& jarDestination);
     void print() const;
-    int imprimeCaminho(const GameState &noFinal, int indiceNoFinal, std::vector<GameState> &estados);
-    int get_transfer_value_from_jars(Jar &jarOrigin, Jar &jarDestination);
+    int print_path(const GameState& noFinal, int indiceNoFinal, vector<GameState>& estados);
 };
 
 #endif // STRUCTURE_HPP
