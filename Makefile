@@ -18,10 +18,14 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/a_star_search.cpp \
           $(SRCDIR)/ordenada_gulosa.cpp \
           $(SRCDIR)/backtrack.cpp \
-          $(SRCDIR)/profundidade_largura.cpp
+          $(SRCDIR)/profundidade_largura.cpp \
+          $(SRCDIR)/structure.cpp
 
 # Object files
 OBJECTS = $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
+
+# Header files
+HEADERS = $(wildcard $(INCDIR)/*.hpp)
 
 # Default target
 all: $(TARGET)
@@ -31,9 +35,10 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
 
 # Compile source files to object files
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(INCDIR)/structure.hpp
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(HEADERS)
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
+	@echo "Compiled $< to $@"
 
 # Clean up
 clean:

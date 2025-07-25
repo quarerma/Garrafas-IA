@@ -165,7 +165,7 @@ void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
         std::cout << "\nIteration " << ++iteration << " with threshold " << threshold << "\n";
 
         if (patamar_old == threshold) {
-            std::cout << "No solution found: threshold unchanged. Total states explored: " << game_states.size() << "\n";
+            //No solution
             return;
         }
 
