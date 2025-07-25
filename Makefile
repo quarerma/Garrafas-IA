@@ -4,32 +4,40 @@ CC = g++
 # Compiler flags
 CFLAGS = -Wall -g -std=c++11
 
-# Target executables
-TARGETS = water_jug backtrack
+# Target executable
+TARGET = water_jug
+
+# Directories
+SRCDIR = src
+INCDIR = include
+BUILDDIR = build
+
+# Source files
+SOURCES = $(SRCDIR)/main.cpp \
+          $(SRCDIR)/ida_star_search.cpp \
+          $(SRCDIR)/a_star_search.cpp \
+          $(SRCDIR)/ordenada_gulosa.cpp \
+          $(SRCDIR)/backtrack.cpp \
+          $(SRCDIR)/profundidade_largura.cpp
 
 # Object files
-OBJECTS = ida_star_search.o backtrack.o
+OBJECTS = $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
 # Default target
-all: $(TARGETS)
+all: $(TARGET)
 
-# Link object files to create executables
-water_jug: ida_star_search.o
-	$(CC) $(CFLAGS) -o water_jug ida_star_search.o
-
-backtrack: backtrack.o
-	$(CC) $(CFLAGS) -o backtrack backtrack.o
+# Link object files to create executable
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
 
 # Compile source files to object files
-ida_star_search.o: ida_star_search.cpp structure.hpp
-	$(CC) $(CFLAGS) -c ida_star_search.cpp
-
-backtrack.o: backtrack.cpp backtrack.hpp structure.hpp
-	$(CC) $(CFLAGS) -c backtrack.cpp
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(INCDIR)/structure.hpp
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
 
 # Clean up
 clean:
-	rm -f $(TARGETS) $(OBJECTS)
+	rm -rf $(BUILDDIR) $(TARGET)
 
 # Phony targets
 .PHONY: all clean
