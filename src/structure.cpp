@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <climits>
+#include <limits>
 
 using namespace std;
 
@@ -91,22 +92,22 @@ int GameState::heuristic() const {
 }
 
 int GameState::calculate_action_cost(int jar_idx, int action_type) const {
-    if (jar_idx < 0 || jar_idx >= num_jars) return -1;
+    if (jar_idx < 0 || jar_idx >= num_jars) return std::numeric_limits<int>::max();
     switch (action_type) {
         case 0: // Empty
-            if (jars[jar_idx].is_empty()) return 0;
+            if (jars[jar_idx].is_empty()) return std::numeric_limits<int>::max();  // Ação impossível: já vazio
             return jars[jar_idx].current_value;
         case 1: // Fill
-            if (jars[jar_idx].is_full()) return 0;
+            if (jars[jar_idx].is_full()) return std::numeric_limits<int>::max();  // Ação impossível: já cheio
             return jars[jar_idx].space_left();
         case 2: // Transfer Left
-            if (jar_idx <= 0 || jars[jar_idx].is_empty() || jars[jar_idx - 1].is_full()) return 0;
+            if (jar_idx <= 0 || jars[jar_idx].is_empty() || jars[jar_idx - 1].is_full()) return std::numeric_limits<int>::max();  // Ação impossível
             return std::min(jars[jar_idx].current_value, jars[jar_idx - 1].space_left());
         case 3: // Transfer Right
-            if (jar_idx >= num_jars - 1 || jars[jar_idx].is_empty() || jars[jar_idx + 1].is_full()) return 0;
+            if (jar_idx >= num_jars - 1 || jars[jar_idx].is_empty() || jars[jar_idx + 1].is_full()) return std::numeric_limits<int>::max();  // Ação impossível
             return std::min(jars[jar_idx].current_value, jars[jar_idx + 1].space_left());
         default:
-            return -1;
+            return std::numeric_limits<int>::max();  // Ação inválida
     }
 }
 
