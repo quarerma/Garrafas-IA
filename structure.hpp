@@ -31,8 +31,10 @@ public:
     vector<Jar> jars;
     vector<int> values;
     int parent;
+    bool visited;
     bool closed;
-    int g_cost;
+    int g_cost; // Path cost to node
+    int f_cost; // f = g + h
     int index;
     int target_Q;
     int max_cap;

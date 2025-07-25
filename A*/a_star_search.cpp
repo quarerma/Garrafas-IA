@@ -1,12 +1,12 @@
 #include "structure.hpp"
 #include <queue>
 #include <unordered_map>
-#include <set>
 
+// Comparator for priority_queue to prioritize states with lowest f_cost
 class CompareGameState {
 public:
     bool operator()(const std::pair<int, int>& a, const std::pair<int, int>& b) const {
-        return a.second > b.second; // Compare based on f_cost (g_cost + h)
+        return a.second > b.second; // Min-heap: lower f_cost has higher priority
     }
 };
 
@@ -49,7 +49,6 @@ bool generate_child(GameState& current, std::vector<GameState>& game_states, int
 
     if (valid_action) {
         child = GameState(new_jars, current.index);
-        child.g_cost = current.g_cost + current.calculate_action_cost(jar_idx, action_type);
         return true;
     }
     return false;
@@ -71,33 +70,40 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
     game_states.emplace_back(initial_jars, -1);
     game_states[0].index = 0;
     game_states[0].g_cost = 0;
+    game_states[0].f_cost = game_states[0].heuristic();
+    game_states[0].visited = false; // Initial state not visited yet
 
+    // Priority Queue Explanation:
+    // - This is a min-heap priority queue (customized via CompareGameState) that stores pairs of (state_index, f_cost).
+    // - It ensures the state with the lowest f_cost is always at the top (popped first).
+    // - Usage: push({index, f_cost}) to add states; top() to peek the lowest f_cost state; pop() to remove it.
+    // - Handles stale entries by checking if popped f_cost matches current state's f_cost.
     std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, CompareGameState> open_list;
-    std::unordered_map<std::string, int> visited;
-    std::set<std::string> closed_set;
 
-    open_list.push({0, game_states[0].g_cost + game_states[0].heuristic()});
-    visited[game_states[0].to_key()] = 0;
+    // Visited map for quick duplicate detection: maps state key to index in game_states
+    std::unordered_map<std::string, int> visited_map;
+
+    open_list.push({0, game_states[0].f_cost});
+    visited_map[game_states[0].to_key()] = 0;
 
     int total_states = 1;
 
     while (!open_list.empty()) {
-        int current_idx = open_list.top().first;
+        auto top = open_list.top();
+        int current_idx = top.first;
+        int popped_f = top.second;
         open_list.pop();
 
         GameState& current = game_states[current_idx];
-        std::string current_key = current.to_key();
-
-        if (closed_set.find(current_key) != closed_set.end()) {
-            continue;
+        if (popped_f > current.f_cost || current.visited) {
+            continue; // Stale entry or already visited
         }
 
-        closed_set.insert(current_key);
-        current.closed = true;
+        current.visited = true;
 
         std::cout << "Processing state " << current_idx << ": ";
         current.print();
-        std::cout << "g_cost=" << current.g_cost << ", h=" << current.heuristic() << ", f=" << current.g_cost + current.heuristic() << "\n";
+        std::cout << "g_cost=" << current.g_cost << ", h=" << current.heuristic() << ", f=" << current.f_cost << "\n";
 
         if (current.is_goal()) {
             std::cout << "Goal reached! Total states explored: " << total_states << "\n";
@@ -114,26 +120,45 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
                 GameState child;
                 if (generate_child(current, game_states, jar_idx, action_type, child)) {
                     std::string child_key = child.to_key();
-                    if (closed_set.find(child_key) != closed_set.end()) {
-                        continue;
-                    }
 
-                    int tentative_g_cost = current.g_cost + current.calculate_action_cost(jar_idx, action_type);
-                    auto it = visited.find(child_key);
+                    int action_cost = current.calculate_action_cost(jar_idx, action_type);
+                    int tentative_g = current.g_cost + action_cost;
+                    int child_h = child.heuristic();
+                    int child_f = tentative_g + child_h;
 
-                    if (it == visited.end() || tentative_g_cost < game_states[it->second].g_cost) {
+                    auto it = visited_map.find(child_key);
+                    if (it != visited_map.end()) {
+                        int existing_idx = it->second;
+                        if (game_states[existing_idx].visited || tentative_g >= game_states[existing_idx].g_cost) {
+                            continue; // Already visited or not better
+                        }
+                        // Better path found: update existing state
+                        game_states[existing_idx].g_cost = tentative_g;
+                        game_states[existing_idx].f_cost = child_f;
+                        game_states[existing_idx].parent = current.index;
+                        open_list.push({existing_idx, child_f});
+                        std::cout << "Updated state " << existing_idx << ": ";
+                        game_states[existing_idx].print();
+                        std::cout << "g_cost=" << tentative_g << ", h=" << child_h << ", f=" << child_f << "\n";
+                    } else {
+                        // New state
+                        child.g_cost = tentative_g;
+                        child.f_cost = child_f;
                         child.index = game_states.size();
+                        child.visited = false;
                         game_states.push_back(child);
-                        visited[child_key] = child.index;
-                        open_list.push({child.index, tentative_g_cost + child.heuristic()});
+                        visited_map[child_key] = child.index;
+                        open_list.push({child.index, child_f});
                         total_states++;
                         std::cout << "Added child state " << child.index << ": ";
                         child.print();
-                        std::cout << "g_cost=" << child.g_cost << ", h=" << child.heuristic() << ", f=" << child.g_cost + child.heuristic() << "\n";
+                        std::cout << "g_cost=" << tentative_g << ", h=" << child_h << ", f=" << child_f << "\n";
                     }
                 }
             }
         }
+
+        current.closed = true; // Mark current state as closed
     }
 
     std::cout << "No solution found. Total states explored: " << total_states << "\n";
