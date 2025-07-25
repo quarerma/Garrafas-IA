@@ -3,40 +3,40 @@
 #include <vector>
 #include <algorithm>
 
-bool checkParentLoop(const GameState& child, int current_index, const std::vector<GameState>& game_states) {
-    if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
+bool checkParentLoopBck(const GameState& child, int current_index, const std::vector<GameState>& states) {
+    if (current_index < 0 || current_index >= static_cast<int>(states.size())) {
         return false;
     }
     if (child.parent == -1) {
         std::cout << "  Verificar Ancentral: Sem pai (estado raiz), ciclo impossível\n";
         return false;
     }
-    if (child.parent < 0 || child.parent >= static_cast<int>(game_states.size())) {
+    if (child.parent < 0 || child.parent >= static_cast<int>(states.size())) {
         return false;
     }
 
     int ancestor_idx = child.parent;
     std::string child_key = child.to_key();
     while (ancestor_idx != -1) {
-        if (game_states[ancestor_idx].to_key() == child_key) {
-            std::cout << "  Verificar Ancentral: Chave do filho=" << child_key << ", Chave do ancestral=" << game_states[ancestor_idx].to_key()
+        if (states[ancestor_idx].to_key() == child_key) {
+            std::cout << "  Verificar Ancentral: Chave do filho=" << child_key << ", Chave do ancestral=" << states[ancestor_idx].to_key()
                       << ", Ciclo detectado no índice do ancestral=" << ancestor_idx << "\n";
             return true;
         }
-        ancestor_idx = game_states[ancestor_idx].parent;
+        ancestor_idx = states[ancestor_idx].parent;
     }
     std::cout << "  Verificar Ancentral: Chave do filho=" << child_key << ", Nenhum ciclo detectado nos ancestrais\n";
     return false;
 }
 
-bool generate_one_child(int current_index, std::vector<GameState>& game_states, int& action_index, GameState& child, int jar_idx) {
+bool generate_one_child(int current_index, std::vector<GameState>& states, int& action_index, GameState& child, int jar_idx) {
     std::cout << "Gerando filho para o estado " << current_index << ", jar_idx=" << jar_idx << ", action_index=" << action_index << "\n";
 
-    if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
+    if (current_index < 0 || current_index >= static_cast<int>(states.size())) {
         return false;
     }
 
-    std::vector<Jar> jars = game_states[current_index].jars;
+    std::vector<Jar> jars = states[current_index].jars;
     int num_jars = jars.size();
 
     int action_type = action_index;
@@ -125,7 +125,7 @@ bool generate_one_child(int current_index, std::vector<GameState>& game_states, 
         }
         std::cout << "\n";
 
-        if (checkParentLoop(child, current_index, game_states)) {
+        if (checkParentLoopBck(child, current_index, states)) {
             std::cout << "  Filho rejeitado: Igual a um estado ancestral\n";
             return false;
         }
@@ -149,8 +149,8 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
         std::cout << "Jarro " << jar.id << ": " << jar.current_value << "/" << jar.max_capacity << std::endl;
     }
 
-    std::vector<GameState> game_states;
-    game_states.emplace_back(initial_jars, -1);
+    std::vector<GameState> states;
+    states.emplace_back(initial_jars, -1);
     std::vector<int> action_indices(1, 0);
     std::vector<int> jar_indices(1, 0);
     size_t total_states = 1;
@@ -159,26 +159,26 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
 
     while (current_index >= 0) {
         std::cout << "\nProcessando estado " << current_index << ": jar_idx=" << jar_indices[current_index]
-                  << ", action_idx=" << action_indices[current_index] << ", fechado=" << game_states[current_index].closed
+                  << ", action_idx=" << action_indices[current_index] << ", fechado=" << states[current_index].closed
                   << ", total_estados=" << total_states << "\n";
         std::cout << "  Valores do estado: ";
-        for (const Jar& jar : game_states[current_index].jars) {
+        for (const Jar& jar : states[current_index].jars) {
             std::cout << jar.current_value << "/" << jar.max_capacity << " ";
         }
         std::cout << "\n";
 
-        if (game_states[current_index].is_goal()) {
+        if (states[current_index].is_goal()) {
             std::cout << "Meta atingida! Total de estados explorados: " << total_states << "\n";
             std::vector<int> path;
             int idx = current_index;
             while (idx != -1) {
                 path.push_back(idx);
-                idx = game_states[idx].parent;
+                idx = states[idx].parent;
             }
             std::reverse(path.begin(), path.end());
             for (int i : path) {
                 std::cout << "Estado " << i << ": ";
-                for (int val : game_states[i].values) {
+                for (int val : states[i].values) {
                     std::cout << val << " ";
                 }
                 std::cout << std::endl;
@@ -186,10 +186,10 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
             return;
         }
 
-        if (!game_states[current_index].closed) {
+        if (!states[current_index].closed) {
             GameState child;
-            if (generate_one_child(current_index, game_states, action_indices[current_index], child, jar_indices[current_index])) {
-                game_states.push_back(child);
+            if (generate_one_child(current_index, states, action_indices[current_index], child, jar_indices[current_index])) {
+                states.push_back(child);
                 action_indices.push_back(0);
                 jar_indices.push_back(jar_indices[current_index]);
                 action_indices[current_index]++;
@@ -197,11 +197,11 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
                     action_indices[current_index] = 0;
                     jar_indices[current_index]++;
                     if (jar_indices[current_index] >= static_cast<int>(initial_jars.size())) {
-                        game_states[current_index].closed = true;
+                        states[current_index].closed = true;
                         std::cout << "  Estado " << current_index << " fechado: Todos os jarros e ações esgotados\n";
                     }
                 }
-                current_index = game_states.size() - 1;
+                current_index = states.size() - 1;
                 total_states++;
                 std::cout << "  Movendo para novo estado filho " << current_index << "\n";
                 continue;
@@ -211,7 +211,7 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
                     action_indices[current_index] = 0;
                     jar_indices[current_index]++;
                     if (jar_indices[current_index] >= static_cast<int>(initial_jars.size())) {
-                        game_states[current_index].closed = true;
+                        states[current_index].closed = true;
                         std::cout << "  Estado " << current_index << " fechado: Todos os jarros e ações esgotados\n";
                     }
                 }
@@ -220,13 +220,13 @@ void Backtrack::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
             }
         }
 
-        if (game_states[current_index].closed) {
-            current_index = game_states[current_index].parent;
+        if (states[current_index].closed) {
+            current_index = states[current_index].parent;
             std::cout << "  Retrocedendo para o estado pai " << current_index << "\n";
         }
 
         bool all_closed = true;
-        for (const auto& state : game_states) {
+        for (const auto& state : states) {
             if (!state.closed) {
                 all_closed = false;
                 break;
