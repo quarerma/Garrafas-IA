@@ -1,363 +1,216 @@
-#include "ordenada_gulosa.hpp"
+#include "executor.hpp"
 #include "medidasBuscas.hpp"
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <queue>
 #include <deque>
 #include <ctime>
 #include <set>
 
-
-
-enum Acao
-{
+enum Acao {
     FILL,
     EMPTY,
-    TRANSFER
+    TRANSFER_LEFT,
+    TRANSFER_RIGHT
 };
 
-void copiaEstado(GameState &origem, GameState &destino)
-{
-    for (int i = 0; i < origem.jars.size(); i++)
-    {
-        destino.jars.push_back(origem.jars[i]);
-    }
-    destino.custoCaminho = origem.custoCaminho;
+void copiaEstadoOG(const GameState &origem, GameState &destino) {
+    destino.jars = origem.jars;
+    destino.values = origem.values;
+    destino.g_cost = origem.g_cost;
+    destino.f_cost = origem.f_cost;
+    destino.parent = origem.parent;
+    destino.closed = false;
+    destino.visited = false;
+    destino.target_Q = origem.target_Q;
+    destino.max_cap = origem.max_cap;
+    destino.num_jars = origem.num_jars;
 }
 
-int retornaheuristic()(GameState &state)
-{
-    return state.custoCaminho;
-}
-
-bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJarraDestino, GameState &newState, vector<GameState> &vetorEstados)
-{
-    // verifica primeiro se os arrays das jarras são válidos e castar erro se não, já ajuda o transfer
-
-    if (indiceJarraOrigem < 0 || indiceJarraOrigem >= state.jars.size() || indiceJarraDestino < 0 || indiceJarraDestino >= state.jars.size())
-    {
-        // std::cout << "ERRO: Índice fora dos limites ( " << indiceJarraOrigem << ", " << indiceJarraDestino << ")" << endl;
+bool geraFilhoOG(Acao acao, GameState &state, int indiceJarra, GameState &newState, vector<GameState> &vetorEstados) {
+    if (indiceJarra < 0 || indiceJarra >= state.num_jars) {
         return false;
     }
 
-    // SWITCH CASE
+    copiaEstadoOG(state, newState);
+    bool valid_action = false;
+    int action_cost = 0;
 
-    switch (acao)
-    {
+    switch (acao) {
     case FILL:
-        // ação fill
-        // não pode encher se já estiver cheio
-
-        if (state.jars[indiceJarraOrigem].is_full())
-        {
-            // std::cout << "Já cheio" << endl;
-            return false;
+        if (!state.jars[indiceJarra].is_full()) {
+            action_cost = state.jars[indiceJarra].space_left();
+            newState.jars[indiceJarra].fill();
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.jars[indiceJarraOrigem].fill();
-            newState.custoCaminho += state.jars[indiceJarraOrigem].space_left();
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            newState.heuristic() = retornaheuristic()(newState);
-            vetorEstados.push_back(newState);
-
-            return true;
-        }
+        break;
     case EMPTY:
-        // não pode esvaziar se já estiver vazio
-
-        if (state.jars[indiceJarraOrigem].is_empty())
-        {
-            // std::cout << "Já vazio" << endl;
-            return false;
+        if (!state.jars[indiceJarra].is_empty()) {
+            action_cost = state.jars[indiceJarra].current_value;
+            newState.jars[indiceJarra].empty();
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.jars[indiceJarraOrigem].empty();
-
-            newState.custoCaminho += state.jars[indiceJarraOrigem].current_value;
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            newState.heuristic() = retornaheuristic()(newState);
-            vetorEstados.push_back(newState);
-
-            return true;
+        break;
+    case TRANSFER_LEFT:
+        if (indiceJarra > 0 && !state.jars[indiceJarra].is_empty() && !state.jars[indiceJarra - 1].is_full()) {
+            int transferred = state.get_transfer_value_from_jars(state.jars[indiceJarra], state.jars[indiceJarra - 1]);
+            action_cost = transferred;
+            newState.transfer_from_jars(newState.jars[indiceJarra], newState.jars[indiceJarra - 1]);
+            valid_action = true;
         }
-    case TRANSFER:
-        // nao pode transfer pra ele mesmo
-        // não pode se estiver vazio
-        // não pode se o outro estiver cheio
-
-        if (indiceJarraOrigem == indiceJarraDestino || state.jars[indiceJarraOrigem].is_empty() || state.jars[indiceJarraDestino].is_full())
-        {
-            // std::cout << "Vazio, cheio ou na borda" << endl;
-            return false;
+        break;
+    case TRANSFER_RIGHT:
+        if (indiceJarra < state.num_jars - 1 && !state.jars[indiceJarra].is_empty() && !state.jars[indiceJarra + 1].is_full()) {
+            int transferred = state.get_transfer_value_from_jars(state.jars[indiceJarra], state.jars[indiceJarra + 1]);
+            action_cost = transferred;
+            newState.transfer_from_jars(newState.jars[indiceJarra], newState.jars[indiceJarra + 1]);
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.transfer_from_jars(newState.jars[indiceJarraOrigem], newState.jars[indiceJarraDestino]);
-
-            newState.custoCaminho += state.get_transfer_value_from_jars(state.jars[indiceJarraOrigem], state.jars[indiceJarraDestino]);
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            newState.heuristic() = retornaheuristic()(newState);
-            vetorEstados.push_back(newState);
-
-            return true;
-        }
-    default:
-        cout << "Ação desconhecida" << endl;
+        break;
     }
+
+    if (valid_action) {
+        newState.g_cost += action_cost;
+        newState.f_cost = newState.g_cost + newState.heuristic();
+        newState.index = vetorEstados.size();
+        vetorEstados.push_back(newState);
+        return true;
+    }
+    return false;
 }
 
-bool comparaPorCusto(const GameState &stateA, const GameState &stateB)
-{
-    return stateA.custoCaminho > stateB.custoCaminho;
+bool comparaPorCusto(const GameState &stateA, const GameState &stateB) {
+    return stateA.g_cost < stateB.g_cost; // Menor custo primeiro
 }
 
-bool comparaPorheuristic()(const GameState &stateA, const GameState &stateB)
-{
-    return stateA.heuristic() < stateB.heuristic();
+bool comparaPorHeuristica(const GameState &stateA, const GameState &stateB) {
+    return stateA.heuristic() < stateB.heuristic(); // Menor heurística primeiro
 }
 
-void OrdenadaGulosa::busca_ordenada(const std::vector<Jar> &initial_jars)
-{
-    // cria gameState inicial como noAtual
-
+void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    GameState estadoAtual = estadoInicial;
-
-    // cria vetor de estados
-
-    vector<GameState> vetorEstados;
-    vetorEstados.push_back(estadoInicial);
-
-    // cria set de antecessores
-
-    std::set<string> jaVisitados;
-
-    // cria profundidade e medidas
-
+    vector<GameState> vetorEstados = {estadoInicial};
+    std::set<std::string> jaVisitados;
     MedidasBusca medidas;
-    int profundidade = 0;
     std::clock_t c_start = std::clock();
 
-    // cria deque de abertos e coloca o gamestate inicial
+    std::deque<GameState> abertos;
+    abertos.push_back(estadoInicial);
+    jaVisitados.insert(estadoInicial.to_key());
 
-    deque<GameState> abertos;
-    abertos.push_front(estadoInicial);
-
-    // while !listaAbertos.empty()
-    while (!abertos.empty())
-    {
-        // noAtual = primeiro da lista (tirar ele da lista)
-        estadoAtual = abertos.front();
+    while (!abertos.empty()) {
+        GameState estadoAtual = abertos.front();
         abertos.pop_front();
         medidas.nosVisitados++;
 
-        //  imprime nó
         estadoAtual.print();
 
-        //  verifica vitória (se sim, imprimir)
-        if (estadoAtual.is_goal())
-        {
-            std::cout << endl
-                      << "Nó encontrado!" << endl;
-
-            // medidas depois
-
+        if (estadoAtual.is_goal()) {
+            std::cout << endl << "Nó encontrado!" << endl;
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
-
             medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
-            medidas.custoCaminho = estadoAtual.custoCaminho;
+            medidas.custoCaminho = estadoAtual.g_cost;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
             return;
         }
-
-        // cria vetor provisório pros filhos
 
         vector<GameState> filhosNovosOrdenados;
 
-        // for jarros
-        for (int numJarro = 0; numJarro < estadoAtual.jars.size(); numJarro++)
-        {
-            //  cria nós possíveis e vai adicionando ao final da lista (se o filho existir)
-            // fill
-            GameState filhoFill;
-            if (geraFilho(FILL, estadoAtual, numJarro, numJarro, filhoFill, vetorEstados) && jaVisitados.insert(filhoFill.to_key()).second)
-            {
+        for (int numJarro = 0; numJarro < estadoAtual.num_jars; numJarro++) {
+            GameState filho;
+            if (geraFilhoOG(FILL, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoFill.to_key() << endl;
-                //  abertos.push(filhoFill);
-                filhosNovosOrdenados.push_back(filhoFill);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // empty
-
-            GameState filhoEmpty;
-            if (geraFilho(EMPTY, estadoAtual, numJarro, numJarro, filhoEmpty, vetorEstados) && jaVisitados.insert(filhoEmpty.to_key()).second)
-            {
+            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoEmpty.to_key() << endl;
-                //  abertos.push(filhoEmpty);
-                filhosNovosOrdenados.push_back(filhoEmpty);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // transfer left
-
-            GameState filhoTransferLeft;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro - 1, filhoTransferLeft, vetorEstados) && jaVisitados.insert(filhoTransferLeft.to_key()).second)
-            {
+            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoTransferLeft.to_key() << endl;
-                //  abertos.push(filhoTransferLeft);
-                filhosNovosOrdenados.push_back(filhoTransferLeft);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // transfer right
-
-            GameState filhoTransferRight;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro + 1, filhoTransferRight, vetorEstados) && jaVisitados.insert(filhoTransferRight.to_key()).second)
-            {
+            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoTransferRight.to_key() << endl;
-                //  abertos.push(filhoTransferRight);
-                filhosNovosOrdenados.push_back(filhoTransferRight);
+                filhosNovosOrdenados.push_back(filho);
             }
         }
 
-        // ordenar filhos
-
+        // Sort by path cost (g)
         std::sort(filhosNovosOrdenados.begin(), filhosNovosOrdenados.end(), comparaPorCusto);
 
-        // adiciona ao topo da pilha de forma que o menor filho fique no topo
-
-        for (int i = 0; i < filhosNovosOrdenados.size(); i++)
-        {
-            abertos.push_front(filhosNovosOrdenados[i]);
+        // Add sorted children to front (smallest cost first)
+        for (auto it = filhosNovosOrdenados.rbegin(); it != filhosNovosOrdenados.rend(); ++it) {
+            if (jaVisitados.insert(it->to_key()).second) {
+                abertos.push_front(*it);
+            }
         }
     }
-
-    return;
 }
 
-void OrdenadaGulosa::busca_gulosa(const std::vector<Jar> &initial_jars)
-{
-    // cria gameState inicial como noAtual
-
+void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    GameState estadoAtual = estadoInicial;
-
-    // cria vetor de estados
-
-    vector<GameState> vetorEstados;
-    vetorEstados.push_back(estadoInicial);
-
-    // cria set de antecessores
-
-    std::set<string> jaVisitados;
-
-    // cria profundidade e medidas
-
+    vector<GameState> vetorEstados = {estadoInicial};
+    std::set<std::string> jaVisitados;
     MedidasBusca medidas;
-    int profundidade = 0;
     std::clock_t c_start = std::clock();
 
-    // cria deque de abertos e coloca o gamestate inicial
+    std::deque<GameState> abertos;
+    abertos.push_back(estadoInicial);
+    jaVisitados.insert(estadoInicial.to_key());
 
-    deque<GameState> abertos;
-    abertos.push_front(estadoInicial);
-
-    // while !listaAbertos.empty()
-    while (!abertos.empty())
-    {
-        // noAtual = primeiro da lista (tirar ele da lista)
-        estadoAtual = abertos.front();
+    while (!abertos.empty()) {
+        GameState estadoAtual = abertos.front();
         abertos.pop_front();
         medidas.nosVisitados++;
 
-        //  imprime nó
         estadoAtual.print();
 
-        //  verifica vitória (se sim, imprimir)
-        if (estadoAtual.is_goal())
-        {
-            std::cout << endl
-                      << "Nó encontrado!" << endl;
-
-            // medidas depois
-
+        if (estadoAtual.is_goal()) {
+            std::cout << endl << "Nó encontrado!" << endl;
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
-
             medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
-            medidas.custoCaminho = estadoAtual.custoCaminho;
+            medidas.custoCaminho = estadoAtual.g_cost;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
             return;
         }
 
-        // for jarros
-        for (int numJarro = 0; numJarro < estadoAtual.jars.size(); numJarro++)
-        {
-            //  cria nós possíveis e vai adicionando ao final da lista (se o filho existir)
-            // fill
-            GameState filhoFill;
-            if (geraFilho(FILL, estadoAtual, numJarro, numJarro, filhoFill, vetorEstados) && jaVisitados.insert(filhoFill.to_key()).second)
-            {
+        vector<GameState> filhosNovosOrdenados;
+
+        for (int numJarro = 0; numJarro < estadoAtual.num_jars; numJarro++) {
+            GameState filho;
+            if (geraFilhoOG(FILL, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoFill.to_key() << endl;
-                //  abertos.push(filhoFill);
-                abertos.push_back(filhoFill);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // empty
-
-            GameState filhoEmpty;
-            if (geraFilho(EMPTY, estadoAtual, numJarro, numJarro, filhoEmpty, vetorEstados) && jaVisitados.insert(filhoEmpty.to_key()).second)
-            {
+            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoEmpty.to_key() << endl;
-                //  abertos.push(filhoEmpty);
-                abertos.push_back(filhoEmpty);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // transfer left
-
-            GameState filhoTransferLeft;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro - 1, filhoTransferLeft, vetorEstados) && jaVisitados.insert(filhoTransferLeft.to_key()).second)
-            {
+            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoTransferLeft.to_key() << endl;
-                //  abertos.push(filhoTransferLeft);
-                abertos.push_back(filhoTransferLeft);
+                filhosNovosOrdenados.push_back(filho);
             }
-
-            // transfer right
-
-            GameState filhoTransferRight;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro + 1, filhoTransferRight, vetorEstados) && jaVisitados.insert(filhoTransferRight.to_key()).second)
-            {
+            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filho, vetorEstados)) {
                 medidas.nosExpandidos++;
-                // std::cout << "Tentando inserir key = \"" << filhoTransferRight.to_key() << endl;
-                //  abertos.push(filhoTransferRight);
-                abertos.push_back(filhoTransferRight);
+                filhosNovosOrdenados.push_back(filho);
             }
         }
 
-        // ordenar filhos
+        // Sort by heuristic (h)
+        std::sort(filhosNovosOrdenados.begin(), filhosNovosOrdenados.end(), comparaPorHeuristica);
 
-        std::sort(abertos.begin(), abertos.end(), comparaPorheuristic());
+        // Add sorted children to front (smallest h first)
+        for (auto it = filhosNovosOrdenados.rbegin(); it != filhosNovosOrdenados.rend(); ++it) {
+            if (jaVisitados.insert(it->to_key()).second) {
+                abertos.push_front(*it);
+            }
+        }
     }
-
-    return;
 }

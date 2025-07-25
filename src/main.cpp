@@ -1,9 +1,8 @@
 #include <iostream>
 #include <vector>
 #include "structure.hpp"
-#include "backtrack.hpp"
-#include "profundidade_largura.hpp"
-#include "ordenada_gulosa.hpp"
+#include "executor.hpp"
+
 
 int main()
 {
@@ -22,8 +21,8 @@ int main()
     // buscas.busca_profundidade(jars, 5);
     // buscas.busca_largura(jars);
 
-    OrdenadaGulosa buscas;
-    buscas.busca_ordenada(jars);
+    SearchAlgorithms search_algorithms;
+    search_algorithms.busca_ordenada(jars);
 
     return 0;
 }

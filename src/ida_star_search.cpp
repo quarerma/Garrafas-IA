@@ -1,4 +1,5 @@
 #include "structure.hpp"
+#include "executor.hpp"
 #include <unordered_map>
 #include <set>
 #include <limits>
@@ -6,41 +7,41 @@
 #include <vector>
 
 // Checks if the child state creates a cycle with its ancestors
-bool checkParentLoop(const GameState& child, int current_index, const std::vector<GameState>& game_states) {
-    if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
+bool checkParentLoopIDA(const GameState& child, int current_index, const std::vector<GameState>& states) {
+    if (current_index < 0 || current_index >= static_cast<int>(states.size())) {
         return false;
     }
     if (child.parent == -1) {
         std::cout << "  Verificar Ancestral: Sem pai (estado raiz), ciclo impossível\n";
         return false;
     }
-    if (child.parent < 0 || child.parent >= static_cast<int>(game_states.size())) {
+    if (child.parent < 0 || child.parent >= static_cast<int>(states.size())) {
         return false;
     }
 
     int ancestor_idx = child.parent;
     std::string child_key = child.to_key();
     while (ancestor_idx != -1) {
-        if (game_states[ancestor_idx].to_key() == child_key) {
-            std::cout << "  Verificar Ancestral: Chave do filho=" << child_key << ", Chave do ancestral=" << game_states[ancestor_idx].to_key()
+        if (states[ancestor_idx].to_key() == child_key) {
+            std::cout << "  Verificar Ancestral: Chave do filho=" << child_key << ", Chave do ancestral=" << states[ancestor_idx].to_key()
                       << ", Ciclo detectado no índice do ancestral=" << ancestor_idx << "\n";
             return true;
         }
-        ancestor_idx = game_states[ancestor_idx].parent;
+        ancestor_idx = states[ancestor_idx].parent;
     }
     std::cout << "  Verificar Ancestral: Chave do filho=" << child_key << ", Nenhum ciclo detectado nos ancestrais\n";
     return false;
 }
 
 // Generates one child state for the given jar_idx and action_index
-bool generate_one_child(int current_index, std::vector<GameState>& game_states, int action_index, GameState& child, int jar_idx) {
+bool generate_one_child(int current_index, std::vector<GameState>& states, int action_index, GameState& child, int jar_idx) {
     std::cout << "Gerando filho para o estado " << current_index << ", jar_idx=" << jar_idx << ", action_index=" << action_index << "\n";
 
-    if (current_index < 0 || current_index >= static_cast<int>(game_states.size())) {
+    if (current_index < 0 || current_index >= static_cast<int>(states.size())) {
         return false;
     }
 
-    std::vector<Jar> jars = game_states[current_index].jars;
+    std::vector<Jar> jars = states[current_index].jars;
     int num_jars = jars.size();
     int action_type = action_index;
 
@@ -122,7 +123,7 @@ bool generate_one_child(int current_index, std::vector<GameState>& game_states, 
             }
         }
         child = GameState(new_jars, current_index);
-        child.g_cost = game_states[current_index].g_cost + game_states[current_index].calculate_action_cost(jar_idx, action_type);
+        child.g_cost = states[current_index].g_cost + states[current_index].calculate_action_cost(jar_idx, action_type);
         child.f_cost = child.g_cost + child.heuristic();
         child.closed = false;
         child.visited = false;
@@ -133,7 +134,7 @@ bool generate_one_child(int current_index, std::vector<GameState>& game_states, 
         }
         std::cout << "\n";
 
-        if (checkParentLoop(child, current_index, game_states)) {
+        if (checkParentLoopIDA(child, current_index, states)) {
             std::cout << "  Filho rejeitado: Igual a um estado ancestral\n";
             return false;
         }
@@ -145,7 +146,7 @@ bool generate_one_child(int current_index, std::vector<GameState>& game_states, 
     return false;
 }
 
-void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
+void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars) {
     if (initial_jars.empty()) {
         std::cout << "Error: Empty jar list\n";
         return;
@@ -169,17 +170,16 @@ void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
             return;
         }
 
-        // Initialize game_states with only the initial state
-        std::vector<GameState> game_states;
-        game_states.emplace_back(initial_jars, -1);
-        game_states[0].index = 0;
-        game_states[0].g_cost = 0;
-        game_states[0].f_cost = game_states[0].heuristic();
-        game_states[0].closed = false;
-        game_states[0].visited = false;
+        // Initialize states with only the initial state
+        states.emplace_back(initial_jars, -1);
+        states[0].index = 0;
+        states[0].g_cost = 0;
+        states[0].f_cost = states[0].heuristic();
+        states[0].closed = false;
+        states[0].visited = false;
 
         std::unordered_map<std::string, int> visited_map;
-        visited_map[game_states[0].to_key()] = 0;
+        visited_map[states[0].to_key()] = 0;
 
         std::vector<int> jar_indices(1, 0);
         std::vector<int> action_indices(1, 0);
@@ -188,7 +188,7 @@ void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
         std::set<int> discarded; // Tracks f_cost of pruned states
 
         while (current_index >= 0) {
-            GameState& current = game_states[current_index];
+            GameState& current = states[current_index];
             int current_f = current.f_cost;
 
             std::cout << "\nProcessando estado " << current_index << ": jar_idx=" << jar_indices[current_index]
@@ -208,18 +208,18 @@ void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
             // Check if goal is reached and within threshold
             if (current.is_goal() && current_f <= threshold) {
                 std::cout << "Goal reached! Total states explored: " << total_states << "\n";
-                current.print_path(current, current_index, game_states);
+                current.print_path(current, current_index, states);
                 return;
             }
 
             if (!current.visited && !current.closed) {
                 GameState child;
-                if (generate_one_child(current_index, game_states, action_indices[current_index], child, jar_indices[current_index])) {
+                if (generate_one_child(current_index, states, action_indices[current_index], child, jar_indices[current_index])) {
                     std::string child_key = child.to_key();
                     auto it = visited_map.find(child_key);
                     if (it != visited_map.end()) {
                         int existing_idx = it->second;
-                        if (game_states[existing_idx].visited || child.g_cost >= game_states[existing_idx].g_cost) {
+                        if (states[existing_idx].visited || child.g_cost >= states[existing_idx].g_cost) {
                             action_indices[current_index]++;
                             if (action_indices[current_index] > 3) {
                                 action_indices[current_index] = 0;
@@ -233,19 +233,19 @@ void solve_with_ida_star(const std::vector<Jar>& initial_jars) {
                             continue;
                         }
                         // Update existing state
-                        game_states[existing_idx].g_cost = child.g_cost;
-                        game_states[existing_idx].f_cost = child.f_cost;
-                        game_states[existing_idx].parent = current_index;
-                        game_states[existing_idx].closed = false;
-                        game_states[existing_idx].visited = false;
+                        states[existing_idx].g_cost = child.g_cost;
+                        states[existing_idx].f_cost = child.f_cost;
+                        states[existing_idx].parent = current_index;
+                        states[existing_idx].closed = false;
+                        states[existing_idx].visited = false;
                         std::cout << "  Updated state " << existing_idx << ": ";
-                        game_states[existing_idx].print();
+                        states[existing_idx].print();
                         std::cout << "g_cost=" << child.g_cost << ", h=" << child.heuristic() << ", f=" << child.f_cost << "\n";
                         child.index = existing_idx;
                     } else {
                         // New state
-                        child.index = game_states.size();
-                        game_states.push_back(child);
+                        child.index = states.size();
+                        states.push_back(child);
                         visited_map[child_key] = child.index;
                         total_states++;
                     }

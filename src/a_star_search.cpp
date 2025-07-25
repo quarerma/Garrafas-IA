@@ -1,4 +1,5 @@
 #include "structure.hpp"
+#include "executor.hpp"
 #include <queue>
 #include <unordered_map>
 
@@ -10,7 +11,7 @@ public:
     }
 };
 
-bool generate_child(GameState& current, std::vector<GameState>& game_states, int jar_idx, int action_type, GameState& child) {
+bool generate_child(GameState& current, std::vector<GameState>& states, int jar_idx, int action_type, GameState& child) {
     if (jar_idx >= static_cast<int>(current.jars.size())) {
         return false;
     }
@@ -54,7 +55,7 @@ bool generate_child(GameState& current, std::vector<GameState>& game_states, int
     return false;
 }
 
-void solve_with_astar(const std::vector<Jar>& initial_jars) {
+void SearchAlgorithms::solve_with_astar(const std::vector<Jar>& initial_jars) {
     if (initial_jars.empty()) {
         std::cout << "Error: Empty jar list\n";
         return;
@@ -66,12 +67,11 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
         std::cout << "Jar " << jar.id << ": " << jar.current_value << "/" << jar.max_capacity << std::endl;
     }
 
-    std::vector<GameState> game_states;
-    game_states.emplace_back(initial_jars, -1);
-    game_states[0].index = 0;
-    game_states[0].g_cost = 0;
-    game_states[0].f_cost = game_states[0].heuristic();
-    game_states[0].visited = false; // Initial state not visited yet
+    states.emplace_back(initial_jars, -1);
+    states[0].index = 0;
+    states[0].g_cost = 0;
+    states[0].f_cost = states[0].heuristic();
+    states[0].visited = false; // Initial state not visited yet
 
     // Priority Queue Explanation:
     // - This is a min-heap priority queue (customized via CompareGameState) that stores pairs of (state_index, f_cost).
@@ -80,11 +80,11 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
     // - Handles stale entries by checking if popped f_cost matches current state's f_cost.
     std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, CompareGameState> open_list;
 
-    // Visited map for quick duplicate detection: maps state key to index in game_states
+    // Visited map for quick duplicate detection: maps state key to index in states
     std::unordered_map<std::string, int> visited_map;
 
-    open_list.push({0, game_states[0].f_cost});
-    visited_map[game_states[0].to_key()] = 0;
+    open_list.push({0, states[0].f_cost});
+    visited_map[states[0].to_key()] = 0;
 
     int total_states = 1;
 
@@ -94,7 +94,7 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
         int popped_f = top.second;
         open_list.pop();
 
-        GameState& current = game_states[current_idx];
+        GameState& current = states[current_idx];
         if (popped_f > current.f_cost || current.visited) {
             continue; // Stale entry or already visited
         }
@@ -107,7 +107,7 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
 
         if (current.is_goal()) {
             std::cout << "Goal reached! Total states explored: " << total_states << "\n";
-            current.print_path(current, current_idx, game_states);
+            current.print_path(current, current_idx, states);
             return;
         }
 
@@ -118,7 +118,7 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
                 if (action_type == 3 && jar_idx == static_cast<int>(current.jars.size()) - 1) continue; // No transfer right from last jar
 
                 GameState child;
-                if (generate_child(current, game_states, jar_idx, action_type, child)) {
+                if (generate_child(current, states, jar_idx, action_type, child)) {
                     std::string child_key = child.to_key();
 
                     int action_cost = current.calculate_action_cost(jar_idx, action_type);
@@ -129,24 +129,24 @@ void solve_with_astar(const std::vector<Jar>& initial_jars) {
                     auto it = visited_map.find(child_key);
                     if (it != visited_map.end()) {
                         int existing_idx = it->second;
-                        if (game_states[existing_idx].visited || tentative_g >= game_states[existing_idx].g_cost) {
+                        if (states[existing_idx].visited || tentative_g >= states[existing_idx].g_cost) {
                             continue; // Already visited or not better
                         }
                         // Better path found: update existing state
-                        game_states[existing_idx].g_cost = tentative_g;
-                        game_states[existing_idx].f_cost = child_f;
-                        game_states[existing_idx].parent = current.index;
+                        states[existing_idx].g_cost = tentative_g;
+                        states[existing_idx].f_cost = child_f;
+                        states[existing_idx].parent = current.index;
                         open_list.push({existing_idx, child_f});
                         std::cout << "Updated state " << existing_idx << ": ";
-                        game_states[existing_idx].print();
+                        states[existing_idx].print();
                         std::cout << "g_cost=" << tentative_g << ", h=" << child_h << ", f=" << child_f << "\n";
                     } else {
                         // New state
                         child.g_cost = tentative_g;
                         child.f_cost = child_f;
-                        child.index = game_states.size();
+                        child.index = states.size();
                         child.visited = false;
-                        game_states.push_back(child);
+                        states.push_back(child);
                         visited_map[child_key] = child.index;
                         open_list.push({child.index, child_f});
                         total_states++;

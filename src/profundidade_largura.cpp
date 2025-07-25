@@ -1,310 +1,198 @@
-#include "profundidade_largura.hpp"
+#include "executor.hpp"
 #include "medidasBuscas.hpp"
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <queue>
 #include <ctime>
+#include <set>
 
-
-enum Acao
-{
+enum Acao {
     FILL,
     EMPTY,
-    TRANSFER
+    TRANSFER_LEFT,
+    TRANSFER_RIGHT
 };
 
-void copiaEstado(GameState &origem, GameState &destino)
-{
-    for (int i = 0; i < origem.jars.size(); i++)
-    {
-        destino.jars.push_back(origem.jars[i]);
-    }
-    destino.custoCaminho = origem.custoCaminho;
+void copiaEstadoPL(const GameState &origem, GameState &destino) {
+    destino.jars = origem.jars;
+    destino.values = origem.values;
+    destino.parent = origem.parent;
+    destino.closed = false;
+    destino.visited = false;
+    destino.g_cost = origem.g_cost;
+    destino.f_cost = origem.f_cost;
+    destino.index = origem.index;
+    destino.target_Q = origem.target_Q;
+    destino.max_cap = origem.max_cap;
+    destino.num_jars = origem.num_jars;
 }
 
-bool geraFilho(Acao acao, GameState &state, int indiceJarraOrigem, int indiceJarraDestino, GameState &newState, vector<GameState> &vetorEstados)
-{
-    // verifica primeiro se os arrays das jarras são válidos e castar erro se não, já ajuda o transfer
-
-    if (indiceJarraOrigem < 0 || indiceJarraOrigem >= state.jars.size() || indiceJarraDestino < 0 || indiceJarraDestino >= state.jars.size())
-    {
-        // std::cout << "ERRO: Índice fora dos limites ( " << indiceJarraOrigem << ", " << indiceJarraDestino << ")" << endl;
+bool geraFilhoPL(Acao acao, GameState &state, int indiceJarra, GameState &newState, vector<GameState> &vetorEstados) {
+    if (indiceJarra < 0 || indiceJarra >= state.num_jars) {
         return false;
     }
 
-    // SWITCH CASE
+    copiaEstadoPL(state, newState);
+    bool valid_action = false;
+    int action_cost = 0;
 
-    switch (acao)
-    {
+    switch (acao) {
     case FILL:
-        // ação fill
-        // não pode encher se já estiver cheio
-
-        if (state.jars[indiceJarraOrigem].is_full())
-        {
-            // std::cout << "Já cheio" << endl;
-            return false;
+        if (!state.jars[indiceJarra].is_full()) {
+            action_cost = state.jars[indiceJarra].space_left();
+            newState.jars[indiceJarra].fill();
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.jars[indiceJarraOrigem].fill();
-
-            newState.custoCaminho += state.jars[indiceJarraOrigem].space_left();
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            vetorEstados.push_back(newState);
-
-            return true;
-        }
+        break;
     case EMPTY:
-        // não pode esvaziar se já estiver vazio
-
-        if (state.jars[indiceJarraOrigem].is_empty())
-        {
-            // std::cout << "Já vazio" << endl;
-            return false;
+        if (!state.jars[indiceJarra].is_empty()) {
+            action_cost = state.jars[indiceJarra].current_value;
+            newState.jars[indiceJarra].empty();
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.jars[indiceJarraOrigem].empty();
-
-            newState.custoCaminho += state.jars[indiceJarraOrigem].current_value;
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            vetorEstados.push_back(newState);
-
-            return true;
+        break;
+    case TRANSFER_LEFT:
+        if (indiceJarra > 0 && !state.jars[indiceJarra].is_empty() && !state.jars[indiceJarra - 1].is_full()) {
+            int transferred = state.get_transfer_value_from_jars(state.jars[indiceJarra], state.jars[indiceJarra - 1]);
+            action_cost = transferred;
+            newState.transfer_from_jars(newState.jars[indiceJarra], newState.jars[indiceJarra - 1]);
+            valid_action = true;
         }
-    case TRANSFER:
-        // nao pode transfer pra ele mesmo
-        // não pode se estiver vazio
-        // não pode se o outro estiver cheio
-
-        if (indiceJarraOrigem == indiceJarraDestino || state.jars[indiceJarraOrigem].is_empty() || state.jars[indiceJarraDestino].is_full())
-        {
-            // std::cout << "Vazio, cheio ou na borda" << endl;
-            return false;
+        break;
+    case TRANSFER_RIGHT:
+        if (indiceJarra < state.num_jars - 1 && !state.jars[indiceJarra].is_empty() && !state.jars[indiceJarra + 1].is_full()) {
+            int transferred = state.get_transfer_value_from_jars(state.jars[indiceJarra], state.jars[indiceJarra + 1]);
+            action_cost = transferred;
+            newState.transfer_from_jars(newState.jars[indiceJarra], newState.jars[indiceJarra + 1]);
+            valid_action = true;
         }
-        else
-        {
-            copiaEstado(state, newState);
-            newState.transfer_from_jars(newState.jars[indiceJarraOrigem], newState.jars[indiceJarraDestino]);
-
-            newState.custoCaminho += state.get_transfer_value_from_jars(state.jars[indiceJarraOrigem], state.jars[indiceJarraDestino]);
-            newState.index = vetorEstados.size();
-            newState.parent = state.index;
-            vetorEstados.push_back(newState);
-
-            return true;
-        }
-    default:
-        cout << "Ação desconhecida" << endl;
+        break;
     }
+
+    if (valid_action) {
+        newState.g_cost += action_cost;
+        newState.f_cost = newState.g_cost + newState.heuristic();
+        newState.index = vetorEstados.size();
+        newState.parent = state.index;
+        vetorEstados.push_back(newState);
+        return true;
+    }
+    return false;
 }
 
-void busca_profundidade_aux(GameState &state, int &profundidade, const int &profundidadeLimite, bool &noEncontrado, MedidasBusca &medidas, vector<GameState> &vetorEstados)
-{
+void busca_profundidade_aux(GameState &state, int &profundidade, const int &profundidadeLimite, bool &noEncontrado, MedidasBusca &medidas, vector<GameState> &vetorEstados, std::set<std::string> &jaVisitados) {
+    if (profundidade >= profundidadeLimite || noEncontrado) {
+        return;
+    }
+
+    state.visited = true;
     medidas.nosVisitados++;
-    // verifica se é vitória || profundidade limite
-    if (profundidade >= profundidadeLimite || noEncontrado)
-    {
-        return;
-    }
-    if (state.is_goal())
-    {
-        std::cout << endl
-                  << "Estado encontrado!" << endl;
 
+    state.print();
+
+    if (state.is_goal()) {
+        std::cout << endl << "Estado encontrado!" << endl;
         noEncontrado = true;
-
         medidas.profundidadeMax = state.print_path(state, state.index, vetorEstados);
-        medidas.custoCaminho = state.custoCaminho;
+        medidas.custoCaminho = state.g_cost;
         return;
     }
-    // profundidade++
 
     profundidade++;
 
-    // for todas as jarras
-    for (int numJarras = 0; numJarras < state.jars.size(); numJarras++)
-    {
-        // fill
-        GameState filhoFill;
-        if (geraFilho(FILL, state, numJarras, numJarras, filhoFill, vetorEstados) && !noEncontrado)
-        {
+    for (int numJarro = 0; numJarro < state.num_jars; numJarro++) {
+        GameState filho;
+        if (geraFilhoPL(FILL, state, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second && !noEncontrado) {
             medidas.nosExpandidos++;
-            filhoFill.print();
-            busca_profundidade_aux(filhoFill, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados);
+            busca_profundidade_aux(filho, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados, jaVisitados);
         }
-
-        // empty
-
-        GameState filhoEmpty;
-        if (geraFilho(EMPTY, state, numJarras, numJarras, filhoEmpty, vetorEstados) && !noEncontrado)
-        {
+        if (geraFilhoPL(EMPTY, state, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second && !noEncontrado) {
             medidas.nosExpandidos++;
-            filhoEmpty.print();
-            busca_profundidade_aux(filhoEmpty, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados);
+            busca_profundidade_aux(filho, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados, jaVisitados);
         }
-
-        // transfer left
-
-        GameState filhoTransferLeft;
-        if (geraFilho(TRANSFER, state, numJarras, numJarras - 1, filhoTransferLeft, vetorEstados) && !noEncontrado)
-        {
+        if (geraFilhoPL(TRANSFER_LEFT, state, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second && !noEncontrado) {
             medidas.nosExpandidos++;
-            filhoTransferLeft.print();
-            busca_profundidade_aux(filhoTransferLeft, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados);
+            busca_profundidade_aux(filho, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados, jaVisitados);
         }
-
-        // transfer right
-
-        GameState filhoTransferRight;
-        if (geraFilho(TRANSFER, state, numJarras, numJarras + 1, filhoTransferRight, vetorEstados) && !noEncontrado)
-        {
+        if (geraFilhoPL(TRANSFER_RIGHT, state, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second && !noEncontrado) {
             medidas.nosExpandidos++;
-            filhoTransferRight.print();
-            busca_profundidade_aux(filhoTransferRight, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados);
+            busca_profundidade_aux(filho, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados, jaVisitados);
         }
     }
 
-    // profundidade--
-
     profundidade--;
-
-    return;
 }
 
-void ProfundidadeLargura::busca_profundidade(const std::vector<Jar> &initial_jars, const int &profundidadeLimite)
-{
-    // cria gameState inicial
-
+void SearchAlgorithms::busca_profundidade(const std::vector<Jar> &initial_jars, const int &profundidadeLimite) {
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    vector<GameState> vetorEstados;
-    vetorEstados.push_back(estadoInicial);
-
-    // cria classe medidas e inicia
+    vector<GameState> vetorEstados = {estadoInicial};
+    std::set<std::string> jaVisitados;
+    jaVisitados.insert(estadoInicial.to_key());
 
     MedidasBusca medidas;
     int profundidade = 0;
     std::clock_t c_start = std::clock();
-
-    // cria flag
-
     bool noEncontrado = false;
 
-    // chama busca_profundidade_aux
-
-    busca_profundidade_aux(estadoInicial, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados);
-
-    // medidas no final e impressão
+    busca_profundidade_aux(estadoInicial, profundidade, profundidadeLimite, noEncontrado, medidas, vetorEstados, jaVisitados);
 
     std::clock_t c_end = std::clock();
     long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
-
     medidas.tempoExecucao = time_ms;
     medidas.imprimirDados();
-
-    return;
 }
 
-void ProfundidadeLargura::busca_largura(const std::vector<Jar> &initial_jars)
-{
-    // cria gameState inicial como noAtual
-
+void SearchAlgorithms::busca_largura(const std::vector<Jar> &initial_jars) {
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    GameState estadoAtual = estadoInicial;
-
-    // cria vetor de estados
-
-    vector<GameState> vetorEstados;
-    vetorEstados.push_back(estadoInicial);
-
-    // cria profundidade e medidas
+    vector<GameState> vetorEstados = {estadoInicial};
+    std::set<std::string> jaVisitados;
+    jaVisitados.insert(estadoInicial.to_key());
 
     MedidasBusca medidas;
-    int profundidade = 0;
     std::clock_t c_start = std::clock();
 
-    // cria queue de abertos e coloca o gamestate inicial
-
-    queue<GameState> abertos;
+    std::queue<GameState> abertos;
     abertos.push(estadoInicial);
 
-    // while !listaAbertos.empty()
-    while (!abertos.empty())
-    {
-        // noAtual = primeiro da lista (tirar ele da lista)
-        estadoAtual = abertos.front();
+    while (!abertos.empty()) {
+        GameState estadoAtual = abertos.front();
         abertos.pop();
         medidas.nosVisitados++;
 
-        //  imprime nó
         estadoAtual.print();
 
-        //  verifica vitória (se sim, imprimir)
-        if (istate.is_goal())
-        {
-            std::cout << endl
-                      << "Nó encontrado!" << endl;
-
-            // medidas depois
-
+        if (estadoAtual.is_goal()) {
+            std::cout << endl << "Nó encontrado!" << endl;
             std::clock_t c_end = std::clock();
             long time_ms = 1000 * (c_end - c_start) / CLOCKS_PER_SEC;
-
             medidas.profundidadeMax = estadoAtual.print_path(estadoAtual, estadoAtual.index, vetorEstados);
-            medidas.custoCaminho = estadoAtual.custoCaminho;
+            medidas.custoCaminho = estadoAtual.g_cost;
             medidas.tempoExecucao = time_ms;
             medidas.imprimirDados();
             return;
         }
 
-        // for jarros
-        for (int numJarro = 0; numJarro < estadoAtual.jars.size(); numJarro++)
-        {
-            //  cria nós possíveis e vai adicionando ao final da lista (se o filho existir)
-            // fill
-            GameState filhoFill;
-            if (geraFilho(FILL, estadoAtual, numJarro, numJarro, filhoFill, vetorEstados))
-            {
+        for (int numJarro = 0; numJarro < estadoAtual.num_jars; numJarro++) {
+            GameState filho;
+            if (geraFilhoPL(FILL, estadoAtual, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second) {
                 medidas.nosExpandidos++;
-                abertos.push(filhoFill);
+                abertos.push(filho);
             }
-
-            // empty
-
-            GameState filhoEmpty;
-            if (geraFilho(EMPTY, estadoAtual, numJarro, numJarro, filhoEmpty, vetorEstados))
-            {
+            if (geraFilhoPL(EMPTY, estadoAtual, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second) {
                 medidas.nosExpandidos++;
-                abertos.push(filhoEmpty);
+                abertos.push(filho);
             }
-
-            // transfer left
-
-            GameState filhoTransferLeft;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro - 1, filhoTransferLeft, vetorEstados))
-            {
+            if (geraFilhoPL(TRANSFER_LEFT, estadoAtual, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second) {
                 medidas.nosExpandidos++;
-                abertos.push(filhoTransferLeft);
+                abertos.push(filho);
             }
-
-            // transfer right
-
-            GameState filhoTransferRight;
-            if (geraFilho(TRANSFER, estadoAtual, numJarro, numJarro + 1, filhoTransferRight, vetorEstados))
-            {
+            if (geraFilhoPL(TRANSFER_RIGHT, estadoAtual, numJarro, filho, vetorEstados) && jaVisitados.insert(filho.to_key()).second) {
                 medidas.nosExpandidos++;
-                abertos.push(filhoTransferRight);
+                abertos.push(filho);
             }
         }
     }
-
-    return;
 }
