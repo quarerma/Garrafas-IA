@@ -57,15 +57,10 @@ bool generate_child(GameState& current, std::vector<GameState>& states, int jar_
 
 void SearchAlgorithms::solve_with_astar(const std::vector<Jar>& initial_jars) {
     if (initial_jars.empty()) {
-        std::cout << "Error: Empty jar list\n";
         return;
     }
 
-    std::cout << "Solving with A*...\n";
-    std::cout << "Initial state:\n";
-    for (const Jar& jar : initial_jars) {
-        std::cout << "Jar " << jar.id << ": " << jar.current_value << "/" << jar.max_capacity << std::endl;
-    }
+ 
 
     states.emplace_back(initial_jars, -1);
     states[0].index = 0;
@@ -101,13 +96,7 @@ void SearchAlgorithms::solve_with_astar(const std::vector<Jar>& initial_jars) {
 
         current.visited = true;
 
-        std::cout << "Processing state " << current_idx << ": ";
-        current.print();
-        std::cout << "g_cost=" << current.g_cost << ", h=" << current.heuristic() << ", f=" << current.f_cost << "\n";
-
         if (current.is_goal()) {
-            std::cout << "Goal reached! Total states explored: " << total_states << "\n";
-            current.print_path(current, current_idx, states);
             return;
         }
 
@@ -137,9 +126,7 @@ void SearchAlgorithms::solve_with_astar(const std::vector<Jar>& initial_jars) {
                         states[existing_idx].f_cost = child_f;
                         states[existing_idx].parent = current.index;
                         open_list.push({existing_idx, child_f});
-                        std::cout << "Updated state " << existing_idx << ": ";
-                        states[existing_idx].print();
-                        std::cout << "g_cost=" << tentative_g << ", h=" << child_h << ", f=" << child_f << "\n";
+                     
                     } else {
                         // New state
                         child.g_cost = tentative_g;
@@ -150,10 +137,7 @@ void SearchAlgorithms::solve_with_astar(const std::vector<Jar>& initial_jars) {
                         visited_map[child_key] = child.index;
                         open_list.push({child.index, child_f});
                         total_states++;
-                        std::cout << "Added child state " << child.index << ": ";
-                        child.print();
-                        std::cout << "g_cost=" << tentative_g << ", h=" << child_h << ", f=" << child_f << "\n";
-                    }
+                                         }
                 }
             }
         }

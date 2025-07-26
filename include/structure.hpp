@@ -49,8 +49,7 @@ public:
     int calculate_action_cost(int jar_idx, int action_type) const;
     void transfer_from_jars(Jar& jarOrigin, Jar& jarDestination);
     int get_transfer_value_from_jars(Jar& jarOrigin, Jar& jarDestination);
-    void print() const;
-    int print_path(const GameState& noFinal, int indiceNoFinal, vector<GameState>& estados);
+
 };
 
 #endif // STRUCTURE_HPP

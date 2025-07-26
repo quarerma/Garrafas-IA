@@ -124,25 +124,3 @@ int GameState::get_transfer_value_from_jars(Jar &jarOrigin, Jar &jarDestination)
     return transferAmount;
 }
 
-void GameState::print() const {
-    std::cout << "(";
-    for (const Jar &jar : jars) {
-        std::cout << jar.current_value << "/" << jar.max_capacity << " ";
-    }
-    std::cout << ") Custo Caminho: " << g_cost << ", Index: " << index << ", Closed: " << (closed ? "true" : "false") << to_key() << "\n";
-}
-
-int GameState::print_path(const GameState& noFinal, int indiceNoFinal, vector<GameState>& estados) {
-    std::cout << endl << "Caminho até o nó final: " << endl;
-    int noAtualIndice = noFinal.parent;
-    vector<int> caminho;
-    caminho.push_back(indiceNoFinal);
-    while (noAtualIndice != -1) {
-        caminho.push_back(noAtualIndice);
-        noAtualIndice = estados[noAtualIndice].parent;
-    }
-    for (int i = caminho.size() - 1; i >= 0; i--) {
-        estados[caminho[i]].print();
-    }
-    return caminho.size();
-}

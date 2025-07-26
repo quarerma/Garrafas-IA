@@ -25,7 +25,7 @@ void copiaEstadoOG(const GameState &origem, GameState &destino) {
     destino.num_jars = origem.num_jars;
 }
 
-bool geraFilhoOG(Acao acao, GameState &state, int indiceJarra, GameState &newState, vector<GameState> &states) {
+bool geraFilhoOG(Acao acao, GameState &state, int indiceJarra, GameState &newState, std::vector<GameState> &states) {
     if (indiceJarra < 0 || indiceJarra >= state.num_jars) {
         return false;
     }
@@ -70,6 +70,11 @@ bool geraFilhoOG(Acao acao, GameState &state, int indiceJarra, GameState &newSta
     if (valid_action) {
         newState.g_cost += action_cost;
         newState.f_cost = newState.g_cost + newState.heuristic();
+        // Sync values from updated jars
+        for (int i = 0; i < newState.num_jars; ++i) {
+            newState.values[i] = newState.jars[i].current_value;
+        }
+        newState.parent = state.index;
         newState.index = states.size();
         states.push_back(newState);
         return true;
@@ -86,97 +91,101 @@ bool comparaPorHeuristica(const GameState &stateA, const GameState &stateB) {
 }
 
 void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
+    states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
+    states.push_back(estadoInicial);
+
     std::set<std::string> jaVisitados;
+    jaVisitados.insert(estadoInicial.to_key());
+
     std::deque<GameState> abertos;
     abertos.push_back(estadoInicial);
-    jaVisitados.insert(estadoInicial.to_key());
 
     while (!abertos.empty()) {
         GameState estadoAtual = abertos.front();
         abertos.pop_front();
-
-        estadoAtual.print();
+        states[estadoAtual.index].visited = true;
 
         if (estadoAtual.is_goal()) {
-            std::cout << endl << "Nó encontrado!" << endl;
-            estadoAtual.print_path(estadoAtual, estadoAtual.index, states);
             return;
         }
 
-        vector<GameState> filhosNovosOrdenados;
+        std::vector<GameState> filhosNovosOrdenados;
 
-        for (int numJarro = 0; numJarro < estadoAtual.num_jars; numJarro++) {
-            GameState filho;
-            if (geraFilhoOG(FILL, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+        for (int numJarro = 0; numJarro < estadoAtual.num_jars; ++numJarro) {
+            GameState filhoFill;
+            if (geraFilhoOG(FILL, estadoAtual, numJarro, filhoFill, states) && jaVisitados.insert(filhoFill.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoFill);
             }
-            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoEmpty;
+            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filhoEmpty, states) && jaVisitados.insert(filhoEmpty.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoEmpty);
             }
-            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoTransferLeft;
+            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filhoTransferLeft, states) && jaVisitados.insert(filhoTransferLeft.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoTransferLeft);
             }
-            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoTransferRight;
+            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filhoTransferRight, states) && jaVisitados.insert(filhoTransferRight.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoTransferRight);
             }
         }
 
         std::sort(filhosNovosOrdenados.begin(), filhosNovosOrdenados.end(), comparaPorCusto);
 
         for (auto it = filhosNovosOrdenados.rbegin(); it != filhosNovosOrdenados.rend(); ++it) {
-            if (jaVisitados.insert(it->to_key()).second) {
-                abertos.push_front(*it);
-            }
+            abertos.push_front(*it);
         }
     }
 }
 
 void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
+    states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
+    states.push_back(estadoInicial);
+
     std::set<std::string> jaVisitados;
+    jaVisitados.insert(estadoInicial.to_key());
+
     std::deque<GameState> abertos;
     abertos.push_back(estadoInicial);
-    jaVisitados.insert(estadoInicial.to_key());
 
     while (!abertos.empty()) {
         GameState estadoAtual = abertos.front();
         abertos.pop_front();
-
-        estadoAtual.print();
+        states[estadoAtual.index].visited = true;
 
         if (estadoAtual.is_goal()) {
-            std::cout << endl << "Nó encontrado!" << endl;
-            estadoAtual.print_path(estadoAtual, estadoAtual.index, states);
             return;
         }
 
-        vector<GameState> filhosNovosOrdenados;
+        std::vector<GameState> filhosNovosOrdenados;
 
-        for (int numJarro = 0; numJarro < estadoAtual.num_jars; numJarro++) {
-            GameState filho;
-            if (geraFilhoOG(FILL, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+        for (int numJarro = 0; numJarro < estadoAtual.num_jars; ++numJarro) {
+            GameState filhoFill;
+            if (geraFilhoOG(FILL, estadoAtual, numJarro, filhoFill, states) && jaVisitados.insert(filhoFill.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoFill);
             }
-            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoEmpty;
+            if (geraFilhoOG(EMPTY, estadoAtual, numJarro, filhoEmpty, states) && jaVisitados.insert(filhoEmpty.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoEmpty);
             }
-            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoTransferLeft;
+            if (geraFilhoOG(TRANSFER_LEFT, estadoAtual, numJarro, filhoTransferLeft, states) && jaVisitados.insert(filhoTransferLeft.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoTransferLeft);
             }
-            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filho, states)) {
-                filhosNovosOrdenados.push_back(filho);
+            GameState filhoTransferRight;
+            if (geraFilhoOG(TRANSFER_RIGHT, estadoAtual, numJarro, filhoTransferRight, states) && jaVisitados.insert(filhoTransferRight.to_key()).second) {
+                filhosNovosOrdenados.push_back(filhoTransferRight);
             }
         }
 
         std::sort(filhosNovosOrdenados.begin(), filhosNovosOrdenados.end(), comparaPorHeuristica);
 
         for (auto it = filhosNovosOrdenados.rbegin(); it != filhosNovosOrdenados.rend(); ++it) {
-            if (jaVisitados.insert(it->to_key()).second) {
-                abertos.push_front(*it);
-            }
+            abertos.push_front(*it);
         }
     }
 }
