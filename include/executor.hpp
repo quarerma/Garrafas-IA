@@ -19,25 +19,52 @@ public:
     void solve_with_ida_star(const std::vector<Jar> &initial_jars);
 
     void print() const {
+    int visited_count = 0;
+    int closed_count = 0;
+    std::unordered_set<int> unique_parents;
+    int goal_index = -1;
+    int depth = 0;
+    int goal_g_cost = 0;
 
-        int visited_count = 0;
-        int closed_count = 0;
-        std::unordered_set<int> unique_parents;
-
-        for (size_t i = 0; i < states.size(); ++i) {
-            const GameState& s = states[i];
-
-            if (s.visited) visited_count++;
-            if (s.closed) closed_count++;
-            if (s.parent != -1) unique_parents.insert(s.parent); // -1 = root node, not counted
+    // Find goal state or use last state
+    for (size_t i = 0; i < states.size(); ++i) {
+        const GameState& s = states[i];
+        if (s.is_goal()) {
+            goal_index = i;
+            goal_g_cost = s.g_cost;
         }
-
-        std::cout << "-- Summary ---\n";
-        std::cout << "Visited states: " << visited_count - 1 << "\n";
-        std::cout << "Closed states: " << closed_count - 1<< "\n";
-        std::cout << "Expanded (unique parent IDs): " << unique_parents.size() << "\n";
-        std::cout << "Total states: " << states.size() << "\n";
+        if (s.visited) visited_count++;
+        if (s.closed) closed_count++;
+        if (s.parent != -1) unique_parents.insert(s.parent); // -1 = root node, not counted
     }
+
+    // If no goal state found, use the last state
+    if (goal_index == -1 && !states.empty()) {
+        goal_index = states.size() - 1;
+        goal_g_cost = states[goal_index].g_cost;
+    }
+
+    // Calculate depth by tracing parents to root
+    if (goal_index != -1) {
+        int current_index = goal_index;
+        while (current_index != -1 && current_index < static_cast<int>(states.size())) {
+            depth++;
+            current_index = states[current_index].parent;
+        }
+        // Adjust depth if root was reached (root has parent -1, so depth includes root)
+        if (current_index == -1) {
+            depth--; // Subtract 1 to exclude the root node from depth count
+        }
+    }
+
+    std::cout << "-- Summary ---\n";
+    std::cout << "Visited states: " << visited_count - 1 << "\n";
+    std::cout << "Closed states: " << closed_count - 1 << "\n";
+    std::cout << "Expanded (unique parent IDs): " << unique_parents.size() << "\n";
+    std::cout << "Total states: " << states.size() << "\n";
+    std::cout << "Depth of goal (or last state): " << depth << "\n";
+    std::cout << "Path cost (g_cost): " << goal_g_cost << "\n";
+}
 
 };
 

@@ -85,8 +85,7 @@ bool geraFilhoPL(Acao acao, GameState &state, int indiceJarra, GameState &newSta
 }
 
 void busca_profundidade_aux(GameState &state, int &profundidade, const int &profundidadeLimite, bool &noEncontrado, std::vector<GameState>& states, std::set<std::string> &jaVisitados) {
-    state.closed = true;
-    state.visited = true;
+
     if (profundidade >= profundidadeLimite || noEncontrado) {
         return;
     }
@@ -117,7 +116,8 @@ void busca_profundidade_aux(GameState &state, int &profundidade, const int &prof
             busca_profundidade_aux(filhoTransferRight, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
         }
     }
-
+    state.closed = true;
+    state.visited = true;
     profundidade--;
 }
 

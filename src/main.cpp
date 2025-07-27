@@ -10,7 +10,7 @@ int main() {
     // Sample datasets
     std::vector<std::vector<Jar>> samples = {
         // Sample 1: 3 jars
-        {Jar(0, 3, 0), Jar(1, 5, 0), Jar(2, 2, 0)},
+        {Jar(0, 3, 0), Jar(1, 5, 0), Jar(2, 2, 0), Jar(3, 7, 0), Jar(3, 4, 0)},
         // Sample 2: 5 jars
      
       

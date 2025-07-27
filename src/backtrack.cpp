@@ -107,70 +107,57 @@ bool generate_one_child(int current_index, std::vector<GameState>& states, int& 
 
 GameState SearchAlgorithms::solve_with_backtracking(const std::vector<Jar>& initial_jars) {
     if (initial_jars.empty()) {
-        return GameState(); // Return empty state for invalid input
+        return GameState(); // invalid input
     }
 
     states.clear();
     states.emplace_back(initial_jars, -1);
-    states[0].g_cost = 0; // Initialize g_cost for the initial state
-    std::vector<int> action_indices(1, 0);
-    std::vector<int> jar_indices(1, 0);
-    size_t total_states = 1;
+    states[0].g_cost = 0;
+
+    std::vector<int> action_indices(1, 0); // track which action we're on
+    std::vector<int> jar_indices(1, 0);    // track which jar we're on
 
     int current_index = 0;
+    size_t total_states = 1;
 
     while (current_index >= 0) {
         if (states[current_index].is_goal()) {
-            return states[current_index]; // Return the goal state
+            std::cout << "🎯 Goal found! Explored: " << total_states << " states.\n";
+            return states[current_index];
         }
+
         states[current_index].visited = true;
 
-        if (!states[current_index].closed) {
-            GameState child;
-            if (generate_one_child(current_index, states, action_indices[current_index], child, jar_indices[current_index])) {
-                states.push_back(child);
-                action_indices.push_back(0);
-                jar_indices.push_back(jar_indices[current_index]);
-                action_indices[current_index]++;
-                if (action_indices[current_index] > 3) {
-                    action_indices[current_index] = 0;
-                    jar_indices[current_index]++;
-                    if (jar_indices[current_index] >= static_cast<int>(initial_jars.size())) {
-                        states[current_index].closed = true;
-                    }
-                }
-                current_index = states.size() - 1;
-                total_states++;
-                continue;
-            } else {
-                action_indices[current_index]++;
-                if (action_indices[current_index] > 3) {
-                    action_indices[current_index] = 0;
-                    jar_indices[current_index]++;
-                    if (jar_indices[current_index] >= static_cast<int>(initial_jars.size())) {
-                        states[current_index].closed = true;
-                    }
-                }
-            }
+        int action = action_indices[current_index];
+        int jar = jar_indices[current_index];
+
+        if (action > 3) {
+            action_indices[current_index] = 0;
+            jar_indices[current_index]++;
+            jar = jar_indices[current_index];
         }
 
-        if (states[current_index].closed) {
-            current_index = states[current_index].parent;
+        if (jar >= static_cast<int>(initial_jars.size())) {
+            states[current_index].closed = true;
+            current_index = states[current_index].parent; // backtrack
+            continue;
         }
 
-        bool all_closed = true;
-        for (const auto& state : states) {
-            if (!state.closed) {
-                all_closed = false;
-                break;
-            }
-        }
-        if (all_closed && current_index < 0) {
-            std::cout << "Nenhuma solução encontrada. Total de estados explorados: " << total_states << "\n";
-            return GameState(); // Return empty state for no solution
+        GameState child;
+        if (generate_one_child(current_index, states, action_indices[current_index], child, jar_indices[current_index])) {
+            // Found valid child, push it and move to it
+            states.push_back(child);
+            action_indices[current_index]++; // move to next action on this node
+            action_indices.push_back(0);     // new child starts at 0 action
+            jar_indices.push_back(0);        // new child starts at jar 0
+            current_index = static_cast<int>(states.size() - 1);
+            total_states++;
+        } else {
+            // Invalid move, try next action
+            action_indices[current_index]++;
         }
     }
 
-    std::cout << "Nenhuma solução encontrada. Total de estados explorados: " << total_states << "\n";
-    return GameState(); // Return empty state for no solution
+    std::cout << "❌ No solution found. Explored: " << total_states << " states.\n";
+    return GameState(); // no solution
 }
