@@ -26,13 +26,15 @@ public:
     int depth = 0;
     int goal_g_cost = 0;
 
-    // Find goal state or use last state
+    // Find the first goal state
     for (size_t i = 0; i < states.size(); ++i) {
         const GameState& s = states[i];
-        if (s.is_goal()) {
+        if (s.is_goal() && goal_index == -1) { // Only set if no goal was found yet
+            std::cout << "Goal state found at index: " << i << "   Key:" << s.to_key() << "\n";
             goal_index = i;
             goal_g_cost = s.g_cost;
         }
+        
         if (s.visited) visited_count++;
         if (s.closed) closed_count++;
         if (s.parent != -1) unique_parents.insert(s.parent); // -1 = root node, not counted

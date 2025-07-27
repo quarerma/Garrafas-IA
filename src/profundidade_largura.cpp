@@ -27,6 +27,21 @@ void copiaEstadoPL(const GameState &origem, GameState &destino) {
     destino.num_jars = origem.num_jars;
 }
 
+bool checkParentLoopPL(const GameState& child, const std::vector<GameState>& states) {
+    if (child.parent == -1) return false;
+
+    std::string child_key = child.to_key();
+    int ancestor_idx = child.parent;
+
+    while (ancestor_idx != -1) {
+        if (states[ancestor_idx].to_key() == child_key) {
+            return true;
+        }
+        ancestor_idx = states[ancestor_idx].parent;
+    }
+    return false;
+}
+
 bool geraFilhoPL(Acao acao, GameState &state, int indiceJarra, GameState &newState, std::vector<GameState>& states) {
     if (indiceJarra < 0 || indiceJarra >= state.num_jars) {
         return false;
@@ -70,54 +85,68 @@ bool geraFilhoPL(Acao acao, GameState &state, int indiceJarra, GameState &newSta
     }
 
     if (valid_action) {
-        newState.g_cost = state.g_cost + action_cost; // Explicitly set g_cost from parent
+        newState.g_cost = state.g_cost + action_cost;
         newState.f_cost = newState.g_cost + newState.heuristic();
-        // Sync values from updated jars
+
         for (int i = 0; i < newState.num_jars; ++i) {
             newState.values[i] = newState.jars[i].current_value;
         }
+
         newState.parent = state.index;
         newState.index = states.size();
+
+        // 🧠 Evita ciclos na árvore (loop de volta para ancestral)
+        if (checkParentLoopPL(newState, states)) {
+
+            return false;
+        }
+
         states.push_back(newState);
         return true;
     }
     return false;
 }
 
-void busca_profundidade_aux(GameState &state, int &profundidade, const int &profundidadeLimite, bool &noEncontrado, std::vector<GameState>& states, std::set<std::string> &jaVisitados) {
-
-    if (profundidade >= profundidadeLimite || noEncontrado) {
+void busca_profundidade_aux(GameState &state, int &profundidade, const int &profundidadeLimite,
+                             bool &noEncontrado, std::vector<GameState>& states) {
+    if (profundidade >= profundidadeLimite || noEncontrado)
         return;
-    }
 
     if (state.is_goal()) {
         noEncontrado = true;
-       
         return;
     }
 
     profundidade++;
+    state.visited = true;
 
     for (int numJarro = 0; numJarro < state.num_jars; ++numJarro) {
         GameState filhoFill;
-        if (geraFilhoPL(FILL, state, numJarro, filhoFill, states) && jaVisitados.insert(filhoFill.to_key()).second && !noEncontrado) {
-            busca_profundidade_aux(filhoFill, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
+        if (geraFilhoPL(FILL, state, numJarro, filhoFill, states)) {
+            busca_profundidade_aux(filhoFill, profundidade, profundidadeLimite, noEncontrado, states);
+            if (noEncontrado) return;
         }
+
         GameState filhoEmpty;
-        if (geraFilhoPL(EMPTY, state, numJarro, filhoEmpty, states) && jaVisitados.insert(filhoEmpty.to_key()).second && !noEncontrado) {
-            busca_profundidade_aux(filhoEmpty, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
+        if (geraFilhoPL(EMPTY, state, numJarro, filhoEmpty, states)) {
+            busca_profundidade_aux(filhoEmpty, profundidade, profundidadeLimite, noEncontrado, states);
+            if (noEncontrado) return;
         }
+
         GameState filhoTransferLeft;
-        if (geraFilhoPL(TRANSFER_LEFT, state, numJarro, filhoTransferLeft, states) && jaVisitados.insert(filhoTransferLeft.to_key()).second && !noEncontrado) {
-            busca_profundidade_aux(filhoTransferLeft, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
+        if (geraFilhoPL(TRANSFER_LEFT, state, numJarro, filhoTransferLeft, states)) {
+            busca_profundidade_aux(filhoTransferLeft, profundidade, profundidadeLimite, noEncontrado, states);
+            if (noEncontrado) return;
         }
+
         GameState filhoTransferRight;
-        if (geraFilhoPL(TRANSFER_RIGHT, state, numJarro, filhoTransferRight, states) && jaVisitados.insert(filhoTransferRight.to_key()).second && !noEncontrado) {
-            busca_profundidade_aux(filhoTransferRight, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
+        if (geraFilhoPL(TRANSFER_RIGHT, state, numJarro, filhoTransferRight, states)) {
+            busca_profundidade_aux(filhoTransferRight, profundidade, profundidadeLimite, noEncontrado, states);
+            if (noEncontrado) return;
         }
     }
+
     state.closed = true;
-    state.visited = true;
     profundidade--;
 }
 
@@ -125,16 +154,13 @@ void SearchAlgorithms::busca_profundidade(const std::vector<Jar> &initial_jars, 
     states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    estadoInicial.g_cost = 0; // Initialize g_cost for initial state
+    estadoInicial.g_cost = 0;
     states.push_back(estadoInicial);
-
-    std::set<std::string> jaVisitados;
-    jaVisitados.insert(estadoInicial.to_key());
 
     int profundidade = 0;
     bool noEncontrado = false;
 
-    busca_profundidade_aux(estadoInicial, profundidade, profundidadeLimite, noEncontrado, states, jaVisitados);
+    busca_profundidade_aux(estadoInicial, profundidade, profundidadeLimite, noEncontrado, states);
 
     if (!noEncontrado) {
         std::cout << "Nenhuma solução encontrada. Total de estados explorados: " << states.size() << "\n";
@@ -145,7 +171,7 @@ void SearchAlgorithms::busca_largura(const std::vector<Jar> &initial_jars) {
     states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
-    estadoInicial.g_cost = 0; // Initialize g_cost for initial state
+    estadoInicial.g_cost = 0;
     states.push_back(estadoInicial);
 
     std::set<std::string> jaVisitados;
@@ -162,7 +188,6 @@ void SearchAlgorithms::busca_largura(const std::vector<Jar> &initial_jars) {
         states[estadoAtual.index].visited = true;
 
         if (estadoAtual.is_goal()) {
-           
             return;
         }
 
