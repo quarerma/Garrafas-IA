@@ -119,6 +119,7 @@ GameState SearchAlgorithms::solve_with_backtracking(const std::vector<Jar>& init
             std::cout << "Meta atingida! Total de estados explorados: " << total_states << "\n";
             return states[current_index]; // Return the goal state
         }
+        states[current_index].visited = true; // Return the goal state
 
         if (!states[current_index].closed) {
             GameState child;

@@ -4,6 +4,7 @@
 #include "structure.hpp"
 #include <vector>
 #include <iostream>
+#include <unordered_set>
 
 class SearchAlgorithms {
 public:
@@ -17,14 +18,27 @@ public:
     void solve_with_astar(const std::vector<Jar> &initial_jars);
     void solve_with_ida_star(const std::vector<Jar> &initial_jars);
 
-    // Print function to display the states explored during a search
     void print() const {
-        std::cout << "\n=== Explored States ===\n";
+
+        int visited_count = 0;
+        int closed_count = 0;
+        std::unordered_set<int> unique_parents;
+
         for (size_t i = 0; i < states.size(); ++i) {
-            std::cout << "State " << i << ": ";
-            std::cout << states[i].to_key() << "\n";}
-        std::cout << "Total states explored: " << states.size() << "\n";
+            const GameState& s = states[i];
+
+            if (s.visited) visited_count++;
+            if (s.closed) closed_count++;
+            if (s.parent != -1) unique_parents.insert(s.parent); // -1 = root node, not counted
+        }
+
+        std::cout << "-- Summary ---\n";
+        std::cout << "Visited states: " << visited_count - 1 << "\n";
+        std::cout << "Closed states: " << closed_count - 1<< "\n";
+        std::cout << "Expanded (unique parent IDs): " << unique_parents.size() << "\n";
+        std::cout << "Total states: " << states.size() << "\n";
     }
+
 };
 
 #endif // SEARCH_ALGORITHMS_HPP

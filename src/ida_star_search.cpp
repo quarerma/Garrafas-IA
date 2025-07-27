@@ -133,7 +133,6 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
             return;
         }
 
-        std::cout << "\n🔄 Starting threshold iteration: " << threshold << "\n";
 
         // Clear and start fresh for this threshold
         states.clear();
@@ -162,6 +161,7 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
         while (current_index >= 0) {
             GameState& current = states[current_index];
             int current_f = current.f_cost;
+            current.visited = true;
 
             // Prune if over threshold
             if (current_f > threshold) {
@@ -173,8 +173,6 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
 
             // Check goal
             if (current.is_goal() && current_f <= threshold) {
-                std::cout << "✅ Solution found with cost: " << current.g_cost << "\n";
-                std::cout << "📦 Total nodes generated: " << states.size() << "\n";
                 return;
             }
 
@@ -196,6 +194,7 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
                             exp.first++;
                             if (exp.first >= static_cast<int>(current.jars.size())) {
                                 current.closed = true;
+                                current.visited = true;
                             }
                         }
                         continue;
@@ -217,6 +216,8 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
                                 exp.first++;
                                 if (exp.first >= static_cast<int>(current.jars.size())) {
                                     current.closed = true;
+                                    current.visited = true;
+
                                 }
                             }
                             continue;
@@ -235,6 +236,8 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
                         exp.first++;
                         if (exp.first >= static_cast<int>(current.jars.size())) {
                             current.closed = true;
+                            current.visited = true;
+
                         }
                     }
 
@@ -247,6 +250,8 @@ void SearchAlgorithms::solve_with_ida_star(const std::vector<Jar>& initial_jars)
                         exp.first++;
                         if (exp.first >= static_cast<int>(current.jars.size())) {
                             current.closed = true;
+                            current.visited = true;
+
                         }
                     }
                 }

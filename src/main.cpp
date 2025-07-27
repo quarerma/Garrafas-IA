@@ -29,66 +29,66 @@ int main() {
         double time_taken;
 
         start = std::clock();
-        std::cout << "\nRunning solve_with_backtracking:\n";
+        std::cout << "\nBusca Backtrack:\n";
         search.solve_with_backtracking(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        std::cout << "Number of states: " << search.states.size() << "\n";
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
 
         start = std::clock();
-        std::cout << "\nRunning busca_profundidade (depth limit 10):\n";
+        std::cout << "\nBusca Profundidade (depth limit 10):\n";
         search.busca_profundidade(samples[i], 10);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
         
         start = std::clock();
-        std::cout << "\nRunning busca_largura:\n";
+        std::cout << "\nBusca Largura:\n";
         search.busca_largura(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
         
         start = std::clock();
-        std::cout << "\nRunning busca_ordenada:\n";
+        std::cout << "\nBusca Ordenada:\n";
         search.busca_ordenada(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
         
         start = std::clock();
-        std::cout << "\nRunning busca_gulosa:\n";
+        std::cout << "\nBusca Gulosa:\n";
         search.busca_gulosa(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
         
         start = std::clock();
-        std::cout << "\nRunning solve_with_astar:\n";
+        std::cout << "\nBusca A*:\n";
         search.solve_with_astar(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
         
         start = std::clock();
-        std::cout << "\nRunning solve_with_ida_star:\n";
+        std::cout << "\nBusca IDA*:\n";
         search.solve_with_ida_star(samples[i]);
         end = std::clock();
         time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000;
         std::cout << "Time taken: " << time_taken << " ms\n";
-        // search.print(); // Clear states for next algorithm
+        search.print(); // Clear states for next algorithm
         search.states.clear(); // Clear states for next algorithm
     }
 

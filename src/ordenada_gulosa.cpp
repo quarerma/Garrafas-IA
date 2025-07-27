@@ -106,6 +106,7 @@ void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
         GameState estadoAtual = abertos.front();
         abertos.pop_front();
         states[estadoAtual.index].visited = true;
+        states[estadoAtual.index].closed = true;
 
         if (estadoAtual.is_goal()) {
             return;
@@ -156,6 +157,7 @@ void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
         GameState estadoAtual = abertos.front();
         abertos.pop_front();
         states[estadoAtual.index].visited = true;
+        states[estadoAtual.index].closed = true;
 
         if (estadoAtual.is_goal()) {
             return;
