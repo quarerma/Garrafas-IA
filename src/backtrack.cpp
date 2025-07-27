@@ -96,6 +96,9 @@ bool generate_one_child(int current_index, std::vector<GameState>& states, int& 
         if (checkParentLoopBck(child, current_index, states)) {
             return false;
         }
+        // Calculate g_cost for the child
+        int action_cost = states[current_index].calculate_action_cost(jar_idx, action_type);
+        child.g_cost = states[current_index].g_cost + action_cost;
         return true;
     }
 
@@ -107,7 +110,9 @@ GameState SearchAlgorithms::solve_with_backtracking(const std::vector<Jar>& init
         return GameState(); // Return empty state for invalid input
     }
 
+    states.clear();
     states.emplace_back(initial_jars, -1);
+    states[0].g_cost = 0; // Initialize g_cost for the initial state
     std::vector<int> action_indices(1, 0);
     std::vector<int> jar_indices(1, 0);
     size_t total_states = 1;
@@ -116,10 +121,9 @@ GameState SearchAlgorithms::solve_with_backtracking(const std::vector<Jar>& init
 
     while (current_index >= 0) {
         if (states[current_index].is_goal()) {
-            std::cout << "Meta atingida! Total de estados explorados: " << total_states << "\n";
             return states[current_index]; // Return the goal state
         }
-        states[current_index].visited = true; // Return the goal state
+        states[current_index].visited = true;
 
         if (!states[current_index].closed) {
             GameState child;

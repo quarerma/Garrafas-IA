@@ -68,7 +68,7 @@ bool geraFilhoOG(Acao acao, GameState &state, int indiceJarra, GameState &newSta
     }
 
     if (valid_action) {
-        newState.g_cost += action_cost;
+        newState.g_cost = state.g_cost + action_cost; // Explicitly set g_cost from parent
         newState.f_cost = newState.g_cost + newState.heuristic();
         // Sync values from updated jars
         for (int i = 0; i < newState.num_jars; ++i) {
@@ -94,6 +94,7 @@ void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
     states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
+    estadoInicial.g_cost = 0; // Initialize g_cost for initial state
     states.push_back(estadoInicial);
 
     std::set<std::string> jaVisitados;
@@ -109,6 +110,7 @@ void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
         states[estadoAtual.index].closed = true;
 
         if (estadoAtual.is_goal()) {
+           
             return;
         }
 
@@ -139,12 +141,15 @@ void SearchAlgorithms::busca_ordenada(const std::vector<Jar> &initial_jars) {
             abertos.push_front(*it);
         }
     }
+
+    std::cout << "Nenhuma solução encontrada. Total de estados explorados: " << states.size() << "\n";
 }
 
 void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
     states.clear();
     GameState estadoInicial(initial_jars, -1);
     estadoInicial.index = 0;
+    estadoInicial.g_cost = 0; // Initialize g_cost for initial state
     states.push_back(estadoInicial);
 
     std::set<std::string> jaVisitados;
@@ -160,6 +165,7 @@ void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
         states[estadoAtual.index].closed = true;
 
         if (estadoAtual.is_goal()) {
+         
             return;
         }
 
@@ -190,4 +196,6 @@ void SearchAlgorithms::busca_gulosa(const std::vector<Jar> &initial_jars) {
             abertos.push_front(*it);
         }
     }
+
+    std::cout << "Nenhuma solução encontrada. Total de estados explorados: " << states.size() << "\n";
 }
